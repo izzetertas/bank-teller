@@ -182,9 +182,14 @@ and the ledger scrolls horizontally inside its card.
 - `.vscode/` recommends the Tailwind CSS IntelliSense extension and silences
   the built-in CSS linter's false positives on Tailwind at-rules.
 - The app is fully client-side, so `next.config.ts` sets `output: 'export'`:
-  `npm run build` emits a static site in `out/`, deployable to any static host
-  (Cloudflare Pages: build command `npm run build`, output directory `out`).
+  `npm run build` emits a static site in `out/`, deployable to any static host.
   The e2e suite serves this same artifact.
+- Pushes to `main` deploy automatically: after both CI jobs pass, the `deploy`
+  job publishes `out/` to Cloudflare Pages with Wrangler. Requires two repo
+  secrets (`CLOUDFLARE_API_TOKEN` with Pages edit permission, and
+  `CLOUDFLARE_ACCOUNT_ID`) and a Pages project named `bank-teller` created as
+  Direct Upload — no Cloudflare git integration, so the site is only ever
+  published through the tested pipeline.
 
 [↑ Index](#index)
 
