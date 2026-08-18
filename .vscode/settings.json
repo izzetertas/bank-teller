@@ -1,0 +1,5 @@
+{
+  // globals.css uses Tailwind at-rules (@theme, @apply); the built-in CSS
+  // language server does not know them and would flag "unknown at rule".
+  "css.lint.unknownAtRules": "ignore"
+}
