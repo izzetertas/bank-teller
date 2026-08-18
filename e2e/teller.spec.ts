@@ -56,6 +56,23 @@ test('opens an account, deposits and withdraws, and records the ledger', async (
   await expect(rows.nth(2)).toContainText('Deposit');
 });
 
+test('the first Tab lands on the primary action with a visible focus ring', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.keyboard.press('Tab');
+
+  const openAccount = page.getByRole('link', { name: 'Open account' });
+  await expect(openAccount).toBeFocused();
+  // The ring must contrast with the dark page ground, not with the button.
+  const [ringColor, groundColor] = await openAccount.evaluate((element) => [
+    getComputedStyle(element).outlineColor,
+    getComputedStyle(document.body).backgroundColor,
+  ]);
+  expect(ringColor).not.toBe(groundColor);
+  expect(ringColor).toBe('rgb(246, 243, 232)'); // --color-cream
+});
+
 test('blocks an overdraft with a visible error', async ({ page }) => {
   await page.goto('/');
   await openAccount(page, 'Grace Hopper');

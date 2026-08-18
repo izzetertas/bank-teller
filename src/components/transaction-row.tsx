@@ -29,15 +29,15 @@ export function TransactionRow({
     <tr className="odd:bg-panel-alt">
       <td className="ledger-td">{timeFormatter.format(transaction.timestamp)}</td>
       <td className="ledger-td">
-        <span className={`font-sans font-semibold ${tone}`}>
+        <span className={`ledger-type ${tone}`}>
           {isDeposit ? 'Deposit' : 'Withdrawal'}
         </span>
       </td>
-      <td className={`ledger-td text-right tabular-nums ${tone}`}>
+      <td className={`ledger-td ledger-num ${tone}`}>
         {!isDeposit && '−'}
         {formatCents(transaction.amountCents, currency)}
       </td>
-      <td className="ledger-td text-right tabular-nums">
+      <td className="ledger-td ledger-num">
         {formatCents(transaction.balanceAfterCents, currency)}
       </td>
     </tr>

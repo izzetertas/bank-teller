@@ -20,7 +20,7 @@ export default function GlobalError({
 }): ReactNode {
   return (
     <html lang="en">
-      <body className="bg-shell font-sans text-ink antialiased">
+      <body className="page-body">
         <PageLayout
           title="Something went wrong"
           subtitle={error.message || 'An unexpected error occurred.'}

@@ -152,6 +152,10 @@ describe('validation helpers', () => {
     expect(validateAccountName('ada lovelace', state.accounts)).toBe(
       'An account for “ada lovelace” already exists',
     );
+    // The message echoes the name as typed, not the normalized form.
+    expect(validateAccountName('ADA LOVELACE', state.accounts)).toBe(
+      'An account for “ADA LOVELACE” already exists',
+    );
     expect(validateAccountName('Grace Hopper', state.accounts)).toBeNull();
   });
 

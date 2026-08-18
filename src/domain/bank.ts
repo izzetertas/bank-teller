@@ -5,7 +5,7 @@
  * and directly unit-testable.
  */
 
-import { CURRENCY, formatCents } from '@/domain/money';
+import { DEFAULT_CURRENCY, formatCents } from '@/domain/money';
 
 export type TransactionType = 'deposit' | 'withdrawal';
 
@@ -70,16 +70,16 @@ export function validateAccountName(
   name: string,
   existingAccounts: readonly Account[] = [],
 ): string | null {
-  const trimmed = name.trim();
-  if (trimmed === '') {
+  const accountName = name.trim();
+  if (accountName === '') {
     return 'Customer name is required';
   }
 
   const taken = existingAccounts.some(
-    (account) => account.name.toLowerCase() === trimmed.toLowerCase(),
+    (account) => account.name.toLowerCase() === accountName.toLowerCase(),
   );
 
-  return taken ? `An account for “${trimmed}” already exists` : null;
+  return taken ? `An account for “${accountName}” already exists` : null;
 }
 
 /**
@@ -140,7 +140,7 @@ export function bankReducer(state: BankState, action: BankAction): BankState {
         id: action.id,
         number: `ACC-${1001 + state.accounts.length}`,
         name: action.name.trim(),
-        currency: action.currency ?? CURRENCY,
+        currency: action.currency ?? DEFAULT_CURRENCY,
         balanceCents: 0,
         transactions: [],
       };

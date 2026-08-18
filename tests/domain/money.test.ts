@@ -39,8 +39,22 @@ describe('parseAmount', () => {
     expect(parseAmount('0.00').ok).toBe(false);
   });
 
-  it('rejects amounts above the maximum', () => {
-    expect(parseAmount('1000000000.01').ok).toBe(false);
+  it('names the expected shape when the input is malformed', () => {
+    expect(parseAmount('abc')).toEqual({
+      ok: false,
+      error: 'Enter a valid amount, e.g. 25.00',
+    });
+  });
+
+  it('rejects amounts above the maximum, wording it in the given currency', () => {
+    expect(parseAmount('1000000000.01')).toEqual({
+      ok: false,
+      error: 'Amount exceeds the maximum of $1,000,000,000.00',
+    });
+    expect(parseAmount('1000000000.01', 'EUR')).toEqual({
+      ok: false,
+      error: 'Amount exceeds the maximum of €1,000,000,000.00',
+    });
   });
 
   it('avoids floating-point drift on decimal inputs', () => {

@@ -44,10 +44,10 @@ export function ToastProvider({ children }: { children: ReactNode }): ReactNode 
     [dismiss],
   );
 
-  const api = useMemo<ToastApi>(() => ({ showToast }), [showToast]);
+  const contextValue = useMemo<ToastApi>(() => ({ showToast }), [showToast]);
 
   return (
-    <ToastContext.Provider value={api}>
+    <ToastContext.Provider value={contextValue}>
       {children}
       <div className="toast-stack" role="status" aria-live="polite">
         {toasts.map((toast) => (

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, type ReactNode, type SubmitEvent } from 'react';
+import { type ChangeEvent, useState, type ReactNode, type SubmitEvent } from 'react';
 
-import { Button, ErrorNote } from '@/components/ui';
+import { Button, ErrorNote, TextInput } from '@/components/ui';
 import { validateTransaction, type Account, type TransactionType } from '@/domain/bank';
 import { formatCents, parseAmount } from '@/domain/money';
 import { useBank } from '@/state/bank-context';
@@ -18,9 +18,17 @@ export function TransactionForm({ account }: { account: Account }): ReactNode {
   const [amount, setAmount] = useState('');
   const [error, setError] = useState<string | null>(null);
 
+  function handleInputChange(event: ChangeEvent<HTMLInputElement>): void {
+    const inputValue = event.target.value;
+    if (PARTIAL_AMOUNT_PATTERN.test(inputValue)) {
+      setAmount(inputValue);
+      setError(null);
+    }
+  }
+
   function handleSubmit(event: SubmitEvent<HTMLFormElement>): void {
     event.preventDefault();
-    const parsed = parseAmount(amount);
+    const parsed = parseAmount(amount, account.currency);
     if (!parsed.ok) {
       setError(parsed.error);
       return;
@@ -67,22 +75,14 @@ export function TransactionForm({ account }: { account: Account }): ReactNode {
           Withdraw
         </button>
       </div>
-      <div className="flex flex-wrap items-stretch gap-3.5">
-        <input
+      <div className="amount-row">
+        <TextInput
           className="amount-input"
-          type="text"
           inputMode="decimal"
           aria-label={`Amount (${account.currency})`}
           value={amount}
-          onChange={(event) => {
-            const next = event.target.value;
-            if (!PARTIAL_AMOUNT_PATTERN.test(next)) {
-              return;
-            }
-            setAmount(next);
-            setError(null);
-          }}
           placeholder="0.00"
+          onChange={handleInputChange}
         />
         <Button
           type="submit"
