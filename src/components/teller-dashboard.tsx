@@ -2,12 +2,11 @@
 
 import type { ReactNode } from 'react';
 
-import { AccountSelector } from '@/components/account-selector';
+import { AccountDetails } from '@/components/account-details';
 import { TransactionForm } from '@/components/transaction-form';
 import { TransactionList } from '@/components/transaction-list';
 import { LinkButton, MicroLabel, PageLayout, Panel } from '@/components/ui';
 import { getSelectedAccount } from '@/domain/bank';
-import { formatCents } from '@/domain/money';
 import { useBank } from '@/state/bank-context';
 
 export function TellerDashboard(): ReactNode {
@@ -36,38 +35,17 @@ export function TellerDashboard(): ReactNode {
         </Panel>
       ) : (
         <Panel aria-label="Selected account">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <div className="flex items-center gap-3">
-                <h2 className="account-name">{account.name}</h2>
-                <AccountSelector />
-              </div>
-              <p className="account-number">{account.number}</p>
-            </div>
-            <div className="sm:text-right">
-              <MicroLabel aria-hidden="true">Current balance</MicroLabel>
-              <p
-                key={account.balanceCents}
-                className="balance"
-                aria-label="Current balance"
-              >
-                {formatCents(account.balanceCents, account.currency)}
-              </p>
-            </div>
-          </div>
+          <AccountDetails account={account} />
           <hr className="divider" />
           <TransactionForm account={account} />
           <hr className="divider" />
           <section aria-label="Transaction history">
             <MicroLabel>Transaction ledger</MicroLabel>
-            <TransactionList
-              transactions={account.transactions}
-              currency={account.currency}
-            />
+            <TransactionList transactions={account.transactions} currency={account.currency} />
           </section>
         </Panel>
       )}
-      <footer className="text-center text-xs text-cream-soft">
+      <footer className="page-footer">
         Demo session — data lives in memory and is cleared when the page closes.
       </footer>
     </PageLayout>

@@ -6,5 +6,11 @@ export function TextInput({
   className,
   ...props
 }: ComponentPropsWithRef<'input'>): ReactNode {
-  return <input className={cx('text-input', className)} {...props} />;
+  return (
+    <input
+      className={cx('text-input', className)}
+      type="text"
+      {...props}
+    />
+  );
 }

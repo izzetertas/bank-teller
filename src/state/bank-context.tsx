@@ -35,7 +35,7 @@ const BankContext = createContext<BankApi | null>(null);
 export function BankProvider({ children }: { children: ReactNode }): ReactNode {
   const [state, dispatch] = useReducer(bankReducer, initialBankState);
 
-  const api = useMemo<BankApi>(
+  const contextValue = useMemo<BankApi>(
     () => ({
       state,
       createAccount(name: string, currency?: string): string {
@@ -64,13 +64,13 @@ export function BankProvider({ children }: { children: ReactNode }): ReactNode {
     [state],
   );
 
-  return <BankContext.Provider value={api}>{children}</BankContext.Provider>;
+  return <BankContext.Provider value={contextValue}>{children}</BankContext.Provider>;
 }
 
 export function useBank(): BankApi {
-  const api = useContext(BankContext);
-  if (api === null) {
+  const context = useContext(BankContext);
+  if (context === null) {
     throw new Error('useBank must be used inside <BankProvider>');
   }
-  return api;
+  return context;
 }

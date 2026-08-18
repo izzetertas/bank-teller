@@ -42,7 +42,6 @@ export default function NewAccountPage(): ReactNode {
           <Field label="Customer name">
             <TextInput
               autoFocus
-              type="text"
               value={name}
               onChange={(event) => {
                 setName(event.target.value);
@@ -52,7 +51,7 @@ export default function NewAccountPage(): ReactNode {
             />
           </Field>
           {error !== null && <ErrorNote>{error}</ErrorNote>}
-          <div className="mt-3 flex justify-end gap-2">
+          <div className="form-actions">
             <Button variant="secondary" onClick={() => router.push('/')}>
               Cancel
             </Button>

@@ -30,6 +30,7 @@ export function Modal({
       }
     }
     document.addEventListener('keydown', onDocumentKeyDown);
+
     return () => document.removeEventListener('keydown', onDocumentKeyDown);
   }, [onClose]);
 
@@ -75,7 +76,7 @@ export function Modal({
         aria-label={title}
       >
         <div className="modal-header">
-          <h2 className="m-0 font-serif text-[1.3rem]">{title}</h2>
+          <h2 className="modal-title">{title}</h2>
           <button
             type="button"
             className="modal-close"

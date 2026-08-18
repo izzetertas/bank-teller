@@ -47,12 +47,12 @@ export function parseAmount(input: string): ParseAmountResult {
 }
 
 /** ISO 4217 code the app operates in; every formatter defaults to it. */
-export const CURRENCY = 'USD';
+export const DEFAULT_CURRENCY = 'USD';
 
 const formatters = new Map<string, Intl.NumberFormat>();
 
 /** Formats integer cents as a currency string, e.g. 123456 -> "$1,234.56". */
-export function formatCents(cents: number, currency: string = CURRENCY): string {
+export function formatCents(cents: number, currency: string = DEFAULT_CURRENCY): string {
   let formatter = formatters.get(currency);
 
   if (formatter === undefined) {
