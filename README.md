@@ -181,6 +181,10 @@ and the ledger scrolls horizontally inside its card.
   Playwright e2e suite.
 - `.vscode/` recommends the Tailwind CSS IntelliSense extension and silences
   the built-in CSS linter's false positives on Tailwind at-rules.
+- The app is fully client-side, so `next.config.ts` sets `output: 'export'`:
+  `npm run build` emits a static site in `out/`, deployable to any static host
+  (Cloudflare Pages: build command `npm run build`, output directory `out`).
+  The e2e suite serves this same artifact.
 
 [↑ Index](#index)
 

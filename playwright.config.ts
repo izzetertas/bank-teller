@@ -12,9 +12,9 @@ export default defineConfig({
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
-    // A production build + start rather than `next dev`: Next 16 allows only
-    // one dev server per project, so e2e must not race a locally running one.
-    command: 'npm run build && npm run start -- --port 3211',
+    // Serve the static export (out/) exactly as production hosting does;
+    // this also avoids Next 16's one-dev-server-per-project lock.
+    command: 'npm run build && npx serve out -l 3211',
     port: 3211,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
