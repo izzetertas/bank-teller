@@ -203,8 +203,10 @@ A small Playwright smoke suite (`e2e/`) runs the real app in Chromium through
 real Next.js routing — the piece jsdom cannot cover, since the integration
 tests mock `next/link`/`next/navigation`. It covers the full happy path
 (open account → deposit → withdraw → ledger), overdraft rejection, and
-switching accounts via the modal. Playwright's `webServer` builds and starts
-a production server automatically.
+switching accounts via the modal, plus axe-core accessibility scans
+(`e2e/a11y.spec.ts`) asserting zero WCAG 2.x A/AA violations — color contrast
+included — on every distinct screen state. Playwright's `webServer` builds and
+starts a production server automatically.
 
 ```bash
 npm test              # unit + integration, single run
