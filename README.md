@@ -15,6 +15,7 @@ backend, no persistence.
   - [Styling](#styling)
   - [Tooling & CI](#tooling--ci)
   - [Testing](#testing)
+  - [Deployment](#deployment)
 
 ---
 
@@ -181,15 +182,7 @@ and the ledger scrolls horizontally inside its card.
   Playwright e2e suite.
 - `.vscode/` recommends the Tailwind CSS IntelliSense extension and silences
   the built-in CSS linter's false positives on Tailwind at-rules.
-- The app is fully client-side, so `next.config.ts` sets `output: 'export'`:
-  `npm run build` emits a static site in `out/`, deployable to any static host.
-  The e2e suite serves this same artifact.
-- Pushes to `main` deploy automatically: after both CI jobs pass, the `deploy`
-  job publishes `out/` to Cloudflare Pages with Wrangler. Requires two repo
-  secrets (`CLOUDFLARE_API_TOKEN` with Pages edit permission, and
-  `CLOUDFLARE_ACCOUNT_ID`) and a Pages project named `bank-teller` created as
-  Direct Upload — no Cloudflare git integration, so the site is only ever
-  published through the tested pipeline.
+- Deploys are part of the pipeline — see [Deployment](#deployment).
 
 [↑ Index](#index)
 
@@ -225,5 +218,32 @@ npm run test:e2e      # Playwright smoke suite, headless (CI mode)
 npm run test:e2e:ui   # Playwright UI mode — watch the tests run in a browser
                       # (both need: npx playwright install chromium)
 ```
+
+[↑ Index](#index)
+
+## Deployment
+
+The app is fully client-side, so `next.config.ts` sets `output: 'export'`:
+`npm run build` emits a plain static site in `out/`, deployable to any static
+host. The e2e suite serves this exact artifact, so what gets tested is what
+gets shipped.
+
+Deploys run through GitHub Actions, never by hand: on every push to `main`
+(or a manual "Run workflow" dispatch), the `deploy` job publishes `out/` to
+Cloudflare Pages with Wrangler — but only after both the quality job
+(typecheck, lint, tests, build) and the e2e suite have passed. A broken build
+can never reach production.
+
+One-time setup:
+
+1. Create the Pages project as **Direct Upload** (not git-connected, so the
+   pipeline stays the only path to production):
+   `npx wrangler pages project create bank-teller`
+2. Create a Cloudflare API token with the single permission
+   **Account → Cloudflare Pages → Edit** and no client-IP filter (GitHub
+   runners have changing IPs).
+3. Add two GitHub repository secrets (Settings → Secrets and variables →
+   Actions): `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` (shown in the
+   Workers & Pages sidebar of the Cloudflare dashboard).
 
 [↑ Index](#index)
