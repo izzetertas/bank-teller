@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   ci:
@@ -33,9 +34,11 @@ jobs:
       - run: npm run test:e2e
 
   deploy:
-    # Deploy the static export to Cloudflare Pages, only from main and only
-    # after both the quality gate and the e2e suite have passed.
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Deploy the static export to Cloudflare Pages, only from main (push or
+    # manual dispatch) and only after the quality gate and e2e have passed.
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     needs: [ci, e2e]
     runs-on: ubuntu-latest
     steps:
