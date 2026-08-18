@@ -17,7 +17,7 @@ export default function RootLayout({
 }): ReactNode {
   return (
     <html lang="en">
-      <body className="bg-shell font-sans text-ink antialiased">
+      <body className="page-body">
         <Providers>{children}</Providers>
       </body>
     </html>

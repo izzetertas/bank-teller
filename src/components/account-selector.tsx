@@ -8,9 +8,9 @@ import {
   type ReactNode,
 } from 'react';
 
-import { Avatar, Button, Field, Modal, TextInput } from '@/components/ui';
+import { AccountListItem } from '@/components/account-list-item';
+import { Button, Field, Modal, TextInput } from '@/components/ui';
 import { getSelectedAccount, type Account } from '@/domain/bank';
-import { formatCents } from '@/domain/money';
 import { useBank } from '@/state/bank-context';
 
 export function AccountSelector(): ReactNode {
@@ -37,7 +37,7 @@ export function AccountSelector(): ReactNode {
       account.name.toLowerCase().includes(normalizedQuery) ||
       account.number.toLowerCase().includes(normalizedQuery),
   );
-  const ordered: readonly Account[] = [...matches].sort((left, right) =>
+  const orderedAccounts: readonly Account[] = [...matches].sort((left, right) =>
     left.name.localeCompare(right.name),
   );
 
@@ -92,48 +92,21 @@ export function AccountSelector(): ReactNode {
               placeholder="Search by name or account number"
             />
           </Field>
-          {ordered.length === 0 ? (
+          {orderedAccounts.length === 0 ? (
             <p className="m-0 text-soft">No accounts match “{query.trim()}”.</p>
           ) : (
-            <ul className="-m-[3px] flex max-h-64 list-none flex-col gap-1.5 overflow-y-auto p-[3px]">
-              {ordered.map((account) => {
-                const current = account.id === selected.id;
-                return (
-                  <li key={account.id}>
-                    <button
-                      type="button"
-                      data-account-option
-                      className={
-                        current ? 'account-option current' : 'account-option'
-                      }
-                      aria-current={current}
-                      disabled={current}
-                      onClick={() => {
-                        selectAccount(account.id);
-                        close();
-                      }}
-                    >
-                      <span className="flex min-w-0 items-center gap-2.5">
-                        <Avatar name={account.name} />
-                        <span className="flex min-w-0 flex-col">
-                          <span className="flex items-center gap-2">
-                            <span>{account.name}</span>
-                            {current && (
-                              <span className="current-tag">Current</span>
-                            )}
-                          </span>
-                          <span className="font-mono text-xs tracking-[0.08em] text-soft">
-                            {account.number}
-                          </span>
-                        </span>
-                      </span>
-                      <span className="whitespace-nowrap font-mono tabular-nums text-soft">
-                        {formatCents(account.balanceCents, account.currency)}
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
+            <ul className="account-list">
+              {orderedAccounts.map((account) => (
+                <AccountListItem
+                  key={account.id}
+                  current={account.id === selected.id}
+                  account={account}
+                  onClick={() => {
+                    selectAccount(account.id);
+                    close();
+                  }}
+                />
+              ))}
             </ul>
           )}
         </Modal>

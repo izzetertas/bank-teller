@@ -30,7 +30,7 @@ updated whenever behavior changes.
   Ids and timestamps come from action creators in `src/state/`, never from the
   reducer — every transition must be deterministic and unit-testable.
 - Money is **integer cents** everywhere; never do floating-point dollar math.
-  Currency is per-account (ISO 4217), defaulting to `CURRENCY` in
+  Currency is per-account (ISO 4217), defaulting to `DEFAULT_CURRENCY` in
   `src/domain/money.ts`; always pass `account.currency` to `formatCents`.
 - The reducer is defensive: invalid actions (duplicate name, overdraft, bad
   amount) leave state unchanged, independent of UI validation. Keep both

@@ -51,6 +51,9 @@
  */
 @layer components {
   /* Page frame */
+  .page-body {
+    @apply bg-shell font-sans text-ink antialiased;
+  }
   .page-layout {
     @apply mx-auto flex max-w-3xl flex-col gap-4 px-3 pb-12 pt-5 sm:gap-5 sm:px-4 sm:pb-16 sm:pt-8;
   }
@@ -62,6 +65,12 @@
   }
   .page-subtitle {
     @apply m-0 text-cream-soft;
+  }
+  .page-footer {
+    @apply text-center text-xs text-cream-soft;
+  }
+  .form-actions {
+    @apply mt-3 flex justify-end gap-2;
   }
 
   /* Primitives */
@@ -107,6 +116,12 @@
   }
 
   /* Account card */
+  .account-header {
+    @apply flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between;
+  }
+  .account-title {
+    @apply flex items-center gap-3;
+  }
   .account-name {
     @apply m-0 font-serif text-[1.6rem] leading-tight;
   }
@@ -127,8 +142,16 @@
   .segment.active {
     @apply bg-accent text-white hover:bg-accent-deep;
   }
+  .amount-row {
+    @apply flex flex-wrap items-stretch gap-3.5;
+  }
+  /*
+   * Modifier on .text-input (TextInput always applies it): only the
+   * differences live here. Must stay after .text-input in this file so it
+   * wins at equal specificity.
+   */
   .amount-input {
-    @apply min-w-0 flex-1 basis-48 rounded-[0.6rem] border border-line bg-panel-alt px-4 py-3 font-mono text-lg text-ink focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent;
+    @apply min-w-0 flex-1 basis-48 rounded-[0.6rem] bg-panel-alt px-4 py-3 font-mono text-lg;
   }
 
   /* Transaction ledger */
@@ -141,6 +164,13 @@
   .ledger-td {
     @apply border-b border-line px-2.5 py-2 font-mono;
   }
+  /* Numeric column: right-aligned with tabular figures. */
+  .ledger-num {
+    @apply text-right tabular-nums;
+  }
+  .ledger-type {
+    @apply font-sans font-semibold;
+  }
 
   /* Modal */
   .modal-backdrop {
@@ -152,8 +182,33 @@
   .modal-header {
     @apply flex items-center justify-between gap-3;
   }
+  .modal-title {
+    @apply m-0 font-serif text-[1.3rem];
+  }
   .modal-close {
     @apply cursor-pointer rounded-md border-0 bg-transparent px-2 py-1 text-2xl font-normal leading-none text-soft hover:bg-panel-alt hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent;
+  }
+  /*
+   * Scrollable option list. The negative margin + matching padding keeps
+   * focus outlines from being clipped by overflow-y-auto.
+   */
+  .account-list {
+    @apply -m-0.75 flex max-h-64 list-none flex-col gap-1.5 overflow-y-auto p-0.75;
+  }
+  .account-option-main {
+    @apply flex min-w-0 items-center gap-2.5;
+  }
+  .account-option-text {
+    @apply flex min-w-0 flex-col;
+  }
+  .account-option-title {
+    @apply flex items-center gap-2;
+  }
+  .account-option-number {
+    @apply font-mono text-xs tracking-[0.08em] text-soft;
+  }
+  .account-option-balance {
+    @apply whitespace-nowrap font-mono tabular-nums text-soft;
   }
   .account-option {
     @apply flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg border border-line bg-panel px-3 py-2 text-left font-medium text-ink hover:bg-panel-alt focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent;
