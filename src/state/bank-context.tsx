@@ -12,7 +12,7 @@ import {
   bankReducer,
   initialBankState,
   type BankState,
-  type TransactionType,
+  type CashTransactionType,
 } from '@/domain/bank';
 
 export interface BankApi {
@@ -25,9 +25,11 @@ export interface BankApi {
   selectAccount(id: string): void;
   applyTransaction(
     accountId: string,
-    type: TransactionType,
+    type: CashTransactionType,
     amountCents: number,
   ): void;
+  /** Moves funds between two accounts as one atomic state transition. */
+  transfer(fromAccountId: string, toAccountId: string, amountCents: number): void;
 }
 
 const BankContext = createContext<BankApi | null>(null);
@@ -48,7 +50,7 @@ export function BankProvider({ children }: { children: ReactNode }): ReactNode {
       },
       applyTransaction(
         accountId: string,
-        type: TransactionType,
+        type: CashTransactionType,
         amountCents: number,
       ): void {
         dispatch({
@@ -57,6 +59,17 @@ export function BankProvider({ children }: { children: ReactNode }): ReactNode {
           accountId,
           amountCents,
           transactionId: crypto.randomUUID(),
+          timestamp: Date.now(),
+        });
+      },
+      transfer(fromAccountId: string, toAccountId: string, amountCents: number): void {
+        dispatch({
+          type: 'transfer/apply',
+          fromAccountId,
+          toAccountId,
+          amountCents,
+          outTransactionId: crypto.randomUUID(),
+          inTransactionId: crypto.randomUUID(),
           timestamp: Date.now(),
         });
       },

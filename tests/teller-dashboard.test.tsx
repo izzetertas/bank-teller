@@ -345,4 +345,84 @@ describe('teller dashboard', () => {
     expect(depositRow).toHaveTextContent('$100.00');
     expect(depositRow?.textContent).not.toContain('+');
   });
+
+  it('transfers funds to another account and records both ledger legs', async () => {
+    const user = userEvent.setup();
+    await openAccount(user, 'Grace');
+    await openAccount(user, 'Ada');
+    await submitTransaction(user, 'Deposit', '100');
+
+    await user.click(screen.getByRole('button', { name: 'Transfer' }));
+    await user.selectOptions(screen.getByLabelText('To account'), 'Grace (ACC-1001)');
+    await user.type(screen.getByLabelText('Amount (USD)'), '40');
+    await user.click(screen.getByRole('button', { name: 'Transfer funds' }));
+
+    expect(screen.getByLabelText('Current balance')).toHaveTextContent('$60.00');
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Transferred $40.00 to Grace — balance $60.00',
+    );
+    const sourceHistory = screen.getByRole('region', { name: 'Transaction history' });
+    const outgoingRow = within(sourceHistory).getAllByRole('row')[1];
+    expect(outgoingRow).toHaveTextContent('Transfer to ACC-1001');
+    expect(outgoingRow).toHaveTextContent('−$40.00');
+    expect(outgoingRow).toHaveTextContent('$60.00');
+
+    // The destination received the matching leg.
+    await user.click(screen.getByRole('button', { name: 'Switch account' }));
+    const dialog = screen.getByRole('dialog', { name: 'Switch account' });
+    await user.click(within(dialog).getByRole('button', { name: /Grace/ }));
+    expect(screen.getByLabelText('Current balance')).toHaveTextContent('$40.00');
+    const destinationHistory = screen.getByRole('region', { name: 'Transaction history' });
+    const incomingRow = within(destinationHistory).getAllByRole('row')[1];
+    expect(incomingRow).toHaveTextContent('Transfer from ACC-1002');
+    expect(incomingRow).toHaveTextContent('$40.00');
+    expect(incomingRow).not.toHaveTextContent('−');
+  });
+
+  it('blocks a transfer larger than the balance and keeps both accounts unchanged', async () => {
+    const user = userEvent.setup();
+    await openAccount(user, 'Grace');
+    await openAccount(user, 'Ada');
+    await submitTransaction(user, 'Deposit', '10');
+
+    await user.click(screen.getByRole('button', { name: 'Transfer' }));
+    await user.selectOptions(screen.getByLabelText('To account'), 'Grace (ACC-1001)');
+    await user.type(screen.getByLabelText('Amount (USD)'), '10.01');
+    await user.click(screen.getByRole('button', { name: 'Transfer funds' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Insufficient funds — the balance is $10.00',
+    );
+    expect(screen.getByLabelText('Current balance')).toHaveTextContent('$10.00');
+    const history = screen.getByRole('region', { name: 'Transaction history' });
+    expect(within(history).getAllByRole('row')).toHaveLength(2); // header + deposit
+  });
+
+  it('requires a destination account before transferring', async () => {
+    const user = userEvent.setup();
+    await openAccount(user, 'Grace');
+    await openAccount(user, 'Ada');
+    await submitTransaction(user, 'Deposit', '10');
+
+    await user.click(screen.getByRole('button', { name: 'Transfer' }));
+    await user.type(screen.getByLabelText('Amount (USD)'), '5');
+    await user.click(screen.getByRole('button', { name: 'Transfer funds' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Choose a destination account');
+    expect(screen.getByLabelText('Current balance')).toHaveTextContent('$10.00');
+  });
+
+  it('explains that a second account is needed before transferring', async () => {
+    const user = userEvent.setup();
+    await openAccount(user, 'Ada');
+    await submitTransaction(user, 'Deposit', '10');
+
+    await user.click(screen.getByRole('button', { name: 'Transfer' }));
+
+    expect(
+      screen.getByText('Open a second account to transfer funds between accounts.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText('To account')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Transfer funds' })).toBeDisabled();
+  });
 });

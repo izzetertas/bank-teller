@@ -41,4 +41,30 @@ describe('useBank', () => {
     expect(firstAccount?.transactions[0]?.id).toBeTruthy();
     expect(firstAccount?.transactions[0]?.timestamp).toBeGreaterThan(0);
   });
+
+  it('transfers between accounts with a distinct id per ledger leg', () => {
+    const { result } = renderHook(() => useBank(), { wrapper: BankProvider });
+
+    let sourceAccountId = '';
+    let destinationAccountId = '';
+    act(() => {
+      sourceAccountId = result.current.createAccount('Ada');
+      destinationAccountId = result.current.createAccount('Grace');
+    });
+    act(() => result.current.applyTransaction(sourceAccountId, 'deposit', 1000));
+    act(() => result.current.transfer(sourceAccountId, destinationAccountId, 250));
+
+    const findAccount = (id: string) =>
+      result.current.state.accounts.find((account) => account.id === id);
+    const source = findAccount(sourceAccountId);
+    const destination = findAccount(destinationAccountId);
+    expect(source?.balanceCents).toBe(750);
+    expect(destination?.balanceCents).toBe(250);
+
+    const outgoingId = source?.transactions[0]?.id;
+    const incomingId = destination?.transactions[0]?.id;
+    expect(outgoingId).toBeTruthy();
+    expect(incomingId).toBeTruthy();
+    expect(outgoingId).not.toBe(incomingId);
+  });
 });

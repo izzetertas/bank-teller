@@ -45,6 +45,15 @@ test('dashboard with transactions has no accessibility violations', async ({
   await expectNoViolations(page);
 });
 
+test('transfer mode has no accessibility violations', async ({ page }) => {
+  await page.goto('/');
+  await openAccount(page, 'Grace Hopper');
+  await openAccount(page, 'Ada Lovelace');
+  await page.getByRole('button', { name: 'Transfer', exact: true }).click();
+  await expect(page.getByLabel('To account')).toBeVisible();
+  await expectNoViolations(page);
+});
+
 test('switch-account modal has no accessibility violations', async ({
   page,
 }) => {

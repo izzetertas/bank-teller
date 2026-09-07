@@ -1,9 +1,9 @@
 # Bank Teller
 
 A small bank-teller dashboard built with Next.js 16, React 19, and Tailwind CSS 4.
-A teller can open customer accounts, switch between them, and process cash deposits
-and withdrawals, with every balance change recorded in a per-account transaction
-ledger. All state lives in the browser for the lifetime of the page session — no
+A teller can open customer accounts, switch between them, process cash deposits
+and withdrawals, and transfer funds between accounts, with every balance change
+recorded in a per-account transaction ledger. All state lives in the browser for the lifetime of the page session — no
 backend, no persistence.
 
 ## Index
@@ -62,11 +62,13 @@ npm run start      # serve out/ at http://localhost:3000, exactly as production 
 
 ### Transactions
 
-- Two transaction types: **deposit** and **withdrawal**, chosen with a segmented
-  Deposit / Withdraw toggle above the amount field. A single action button whose
-  label follows the mode ("Deposit cash" / "Withdraw cash") submits; Enter in the
-  amount field submits the current mode. An "Available balance" hint sits under
-  the field, and the action button is disabled in withdraw mode while the
+- Three modes, chosen with a segmented Deposit / Withdraw / Transfer toggle
+  above the amount field: cash **deposit**, cash **withdrawal**, and a
+  **transfer** to another account (see [Transfers](#transfers)). A single
+  action button whose label follows the mode ("Deposit cash" /
+  "Withdraw cash" / "Transfer funds") submits; Enter in the amount field
+  submits the current mode. An "Available balance" hint sits under the field,
+  and the action button is disabled in withdraw and transfer modes while the
   balance is zero.
 - The account card shows the customer name with a sequential teller-facing
   account number ("ACC-1001", assigned at creation) and a labeled
@@ -74,8 +76,28 @@ npm run start      # serve out/ at http://localhost:3000, exactly as production 
 - Every applied transaction is recorded with a unique id, a timestamp, the amount,
   and the account balance immediately after it was applied. The "Transaction
   ledger" lists the newest first, showing date + time, a colored type, a
-  colored amount (green for deposits; red with a `−` sign for withdrawals),
+  colored amount (green for incoming money; red with a `−` sign for outgoing),
   and a "Balance after" column.
+
+### Transfers
+
+- In transfer mode a "To account" dropdown lists every other account,
+  alphabetically by name, as "Name (ACC-1002)". With only one account open the
+  dropdown is replaced by the hint "Open a second account to transfer funds
+  between accounts." and the action button is disabled.
+- Submitting without picking a destination is rejected with
+  "Choose a destination account".
+- A transfer is rejected, leaving both accounts unchanged, when it would
+  overdraw the source ("Insufficient funds — the balance is $X.XX"), when both
+  ends are the same account ("Choose a different destination account"), or
+  when the accounts are denominated in different currencies ("Accounts must
+  share a currency — ACC-1001 is USD, ACC-1002 is EUR"); there is no currency
+  conversion.
+- A successful transfer moves the money in a single state transition and
+  writes one ledger entry into each account: "Transfer to ACC-1002" on the
+  source (red, `−` sign) and "Transfer from ACC-1001" on the destination
+  (green), each with its own id and the account's balance after the leg. The
+  toast reads "Transferred $40.00 to Grace — balance $60.00".
 
 ### Amount input and validation
 

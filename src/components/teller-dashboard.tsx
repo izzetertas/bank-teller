@@ -16,7 +16,7 @@ export function TellerDashboard(): ReactNode {
   return (
     <PageLayout
       title="Bank Teller"
-      subtitle="Open customer accounts and process cash deposits and withdrawals."
+      subtitle="Open customer accounts, process cash deposits and withdrawals, and transfer funds between accounts."
       actions={
         <LinkButton
           href="/accounts/new"

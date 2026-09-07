@@ -7,7 +7,11 @@
 
 import { DEFAULT_CURRENCY, formatCents } from '@/domain/money';
 
-export type TransactionType = 'deposit' | 'withdrawal';
+/** Over-the-counter cash movements on a single account. */
+export type CashTransactionType = 'deposit' | 'withdrawal';
+
+/** Every ledger entry kind; a transfer writes one leg into each account. */
+export type TransactionType = CashTransactionType | 'transfer-in' | 'transfer-out';
 
 export interface Transaction {
   readonly id: string;
@@ -16,6 +20,16 @@ export interface Transaction {
   /** Account balance immediately after this transaction was applied. */
   readonly balanceAfterCents: number;
   readonly timestamp: number;
+  /**
+   * Teller-facing number of the other account in a transfer ("ACC-1002").
+   * A snapshot, like balanceAfterCents: the ledger stays readable on its own.
+   */
+  readonly counterpartyNumber?: string;
+}
+
+/** True for entries that reduce the balance. */
+export function isOutgoing(type: TransactionType): boolean {
+  return type === 'withdrawal' || type === 'transfer-out';
 }
 
 export interface Account {
@@ -45,10 +59,20 @@ export type BankAction =
   | { type: 'account/select'; id: string }
   | {
       type: 'transaction/apply';
-      transactionType: TransactionType;
+      transactionType: CashTransactionType;
       accountId: string;
       amountCents: number;
       transactionId: string;
+      timestamp: number;
+    }
+  | {
+      type: 'transfer/apply';
+      fromAccountId: string;
+      toAccountId: string;
+      amountCents: number;
+      /** One id per ledger leg, so each entry stays unique across accounts. */
+      outTransactionId: string;
+      inTransactionId: string;
       timestamp: number;
     };
 
@@ -94,33 +118,43 @@ export function validateTransaction(
   if (!Number.isInteger(amountCents) || amountCents <= 0) {
     return 'Amount must be greater than zero';
   }
-  if (type === 'withdrawal' && amountCents > account.balanceCents) {
+  if (isOutgoing(type) && amountCents > account.balanceCents) {
     return `Insufficient funds — the balance is ${formatCents(account.balanceCents, account.currency)}`;
   }
   return null;
 }
 
-function applyTransaction(
+/**
+ * Returns an error message when a transfer between two accounts must be
+ * rejected — same account, different currencies, or an overdraft on the
+ * source — otherwise null. Currency conversion is deliberately unsupported.
+ */
+export function validateTransfer(
+  from: Account,
+  to: Account,
+  amountCents: number,
+): string | null {
+  if (from.id === to.id) {
+    return 'Choose a different destination account';
+  }
+  if (from.currency !== to.currency) {
+    return `Accounts must share a currency — ${from.number} is ${from.currency}, ${to.number} is ${to.currency}`;
+  }
+  return validateTransaction(from, 'transfer-out', amountCents);
+}
+
+/** Appends a ledger entry and moves the balance by its signed amount. */
+function recordTransaction(
   account: Account,
-  action: Extract<BankAction, { type: 'transaction/apply' }>,
+  entry: Omit<Transaction, 'balanceAfterCents'>,
 ): Account {
-  const delta =
-    action.transactionType === 'deposit'
-      ? action.amountCents
-      : -action.amountCents;
+  const delta = isOutgoing(entry.type) ? -entry.amountCents : entry.amountCents;
   const balanceAfterCents = account.balanceCents + delta;
-  const transaction: Transaction = {
-    id: action.transactionId,
-    type: action.transactionType,
-    amountCents: action.amountCents,
-    balanceAfterCents,
-    timestamp: action.timestamp,
-  };
 
   return {
     ...account,
     balanceCents: balanceAfterCents,
-    transactions: [transaction, ...account.transactions],
+    transactions: [{ ...entry, balanceAfterCents }, ...account.transactions],
   };
 }
 
@@ -171,9 +205,52 @@ export function bankReducer(state: BankState, action: BankAction): BankState {
         ...state,
         accounts: state.accounts.map((candidate) =>
           candidate.id === account.id
-            ? applyTransaction(candidate, action)
+            ? recordTransaction(candidate, {
+                id: action.transactionId,
+                type: action.transactionType,
+                amountCents: action.amountCents,
+                timestamp: action.timestamp,
+              })
             : candidate,
         ),
+      };
+    }
+    case 'transfer/apply': {
+      const from = getAccount(state, action.fromAccountId);
+      const to = getAccount(state, action.toAccountId);
+      if (
+        from === undefined ||
+        to === undefined ||
+        validateTransfer(from, to, action.amountCents) !== null
+      ) {
+        return state;
+      }
+
+      // Both legs land in one state transition, so no observer can ever see
+      // the money in flight.
+      return {
+        ...state,
+        accounts: state.accounts.map((candidate) => {
+          if (candidate.id === from.id) {
+            return recordTransaction(candidate, {
+              id: action.outTransactionId,
+              type: 'transfer-out',
+              amountCents: action.amountCents,
+              timestamp: action.timestamp,
+              counterpartyNumber: to.number,
+            });
+          }
+          if (candidate.id === to.id) {
+            return recordTransaction(candidate, {
+              id: action.inTransactionId,
+              type: 'transfer-in',
+              amountCents: action.amountCents,
+              timestamp: action.timestamp,
+              counterpartyNumber: from.number,
+            });
+          }
+          return candidate;
+        }),
       };
     }
   }

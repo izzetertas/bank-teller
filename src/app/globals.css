@@ -142,6 +142,13 @@
   .segment.active {
     @apply bg-accent text-white hover:bg-accent-deep;
   }
+  /* Destination picker in transfer mode: sits between the toggle and the amount row. */
+  .transfer-field {
+    @apply mb-3.5 sm:max-w-sm;
+  }
+  .select {
+    @apply w-full cursor-pointer;
+  }
   .amount-row {
     @apply flex flex-wrap items-stretch gap-3.5;
   }

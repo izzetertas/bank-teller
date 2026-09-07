@@ -7,6 +7,7 @@ import {
   initialBankState,
   validateAccountName,
   validateTransaction,
+  validateTransfer,
   type BankAction,
   type BankState,
 } from '@/domain/bank';
@@ -175,6 +176,115 @@ describe('validation helpers', () => {
     );
     expect(validateTransaction(account, 'deposit', 0)).toBe(
       'Amount must be greater than zero',
+    );
+    // A transfer leg draws on the balance exactly like a withdrawal.
+    expect(validateTransaction(account, 'transfer-out', 501)).toBe(
+      'Insufficient funds — the balance is $5.00',
+    );
+    expect(validateTransaction(account, 'transfer-in', 501)).toBeNull();
+  });
+});
+
+describe('transfers', () => {
+  function transfer(
+    state: BankState,
+    fromAccountId: string,
+    toAccountId: string,
+    amountCents: number,
+  ): BankState {
+    return bankReducer(state, {
+      type: 'transfer/apply',
+      fromAccountId,
+      toAccountId,
+      amountCents,
+      outTransactionId: 'tx-out',
+      inTransactionId: 'tx-in',
+      timestamp: 1_700_000_000_000,
+    });
+  }
+
+  function twoFundedAccounts(): BankState {
+    let state = createAccount(initialBankState, 'a1', 'Ada');
+    state = createAccount(state, 'a2', 'Grace');
+    return apply(state, 'a1', 'deposit', 1000);
+  }
+
+  it('moves funds and records one leg in each ledger', () => {
+    const state = transfer(twoFundedAccounts(), 'a1', 'a2', 400);
+
+    const source = getAccount(state, 'a1');
+    const destination = getAccount(state, 'a2');
+    expect(source?.balanceCents).toBe(600);
+    expect(destination?.balanceCents).toBe(400);
+    expect(source?.transactions[0]).toMatchObject({
+      id: 'tx-out',
+      type: 'transfer-out',
+      amountCents: 400,
+      balanceAfterCents: 600,
+      counterpartyNumber: 'ACC-1002',
+    });
+    expect(destination?.transactions[0]).toMatchObject({
+      id: 'tx-in',
+      type: 'transfer-in',
+      amountCents: 400,
+      balanceAfterCents: 400,
+      counterpartyNumber: 'ACC-1001',
+    });
+  });
+
+  it('allows transferring the exact balance', () => {
+    const state = transfer(twoFundedAccounts(), 'a1', 'a2', 1000);
+    expect(getAccount(state, 'a1')?.balanceCents).toBe(0);
+    expect(getAccount(state, 'a2')?.balanceCents).toBe(1000);
+  });
+
+  it('rejects an overdraft and leaves both accounts untouched', () => {
+    const state = twoFundedAccounts();
+    expect(transfer(state, 'a1', 'a2', 1001)).toBe(state);
+  });
+
+  it('rejects a transfer to the same account', () => {
+    const state = twoFundedAccounts();
+    expect(transfer(state, 'a1', 'a1', 100)).toBe(state);
+  });
+
+  it('rejects a transfer between different currencies', () => {
+    let state = createAccount(initialBankState, 'a1', 'Ada');
+    state = bankReducer(state, {
+      type: 'account/create',
+      id: 'a2',
+      name: 'Grace',
+      currency: 'EUR',
+    });
+    state = apply(state, 'a1', 'deposit', 1000);
+    expect(transfer(state, 'a1', 'a2', 100)).toBe(state);
+  });
+
+  it('ignores unknown accounts and invalid amounts', () => {
+    const state = twoFundedAccounts();
+    expect(transfer(state, 'nope', 'a2', 100)).toBe(state);
+    expect(transfer(state, 'a1', 'nope', 100)).toBe(state);
+    expect(transfer(state, 'a1', 'a2', 0)).toBe(state);
+    expect(transfer(state, 'a1', 'a2', 10.5)).toBe(state);
+  });
+
+  it('validateTransfer explains each rejection', () => {
+    const state = twoFundedAccounts();
+    const source = getAccount(state, 'a1');
+    const destination = getAccount(state, 'a2');
+    expect(source).toBeDefined();
+    expect(destination).toBeDefined();
+    if (source === undefined || destination === undefined) return;
+
+    expect(validateTransfer(source, destination, 1000)).toBeNull();
+    expect(validateTransfer(source, source, 100)).toBe(
+      'Choose a different destination account',
+    );
+    expect(validateTransfer(source, { ...destination, currency: 'EUR' }, 100)).toBe(
+      'Accounts must share a currency — ACC-1001 is USD, ACC-1002 is EUR',
+    );
+    expect(validateTransfer(source, destination, 1001)).toBe(
+      'Insufficient funds — the balance is $10.00',
     );
   });
 });
