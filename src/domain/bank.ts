@@ -28,6 +28,19 @@ export interface Account {
   readonly balanceCents: number;
   /** Newest first. */
   readonly transactions: readonly Transaction[];
+  /**
+   * Lifecycle state. Closed accounts stay in state so their ledger remains
+   * viewable and numbers never get reused.
+   */
+  readonly status: AccountStatus;
+  /** When the account was closed; set by the reducer together with status. */
+  readonly closedAt?: number;
+}
+
+export type AccountStatus = 'open' | 'closed';
+
+export function isClosed(account: Account): boolean {
+  return account.status === 'closed';
 }
 
 export interface BankState {
@@ -43,6 +56,7 @@ export const initialBankState: BankState = {
 export type BankAction =
   | { type: 'account/create'; id: string; name: string; currency?: string }
   | { type: 'account/select'; id: string }
+  | { type: 'account/close'; id: string; closedAt: number }
   | {
       type: 'transaction/apply';
       transactionType: TransactionType;
@@ -91,11 +105,29 @@ export function validateTransaction(
   type: TransactionType,
   amountCents: number,
 ): string | null {
+  if (isClosed(account)) {
+    return 'This account is closed';
+  }
   if (!Number.isInteger(amountCents) || amountCents <= 0) {
     return 'Amount must be greater than zero';
   }
   if (type === 'withdrawal' && amountCents > account.balanceCents) {
     return `Insufficient funds — the balance is ${formatCents(account.balanceCents, account.currency)}`;
+  }
+  return null;
+}
+
+/**
+ * Returns an error message when the account cannot be closed — already
+ * closed, or still holding funds — otherwise null. Money is never written
+ * off implicitly: the teller must withdraw the balance first.
+ */
+export function validateAccountClose(account: Account): string | null {
+  if (isClosed(account)) {
+    return 'This account is already closed';
+  }
+  if (account.balanceCents !== 0) {
+    return `Withdraw the remaining balance of ${formatCents(account.balanceCents, account.currency)} before closing`;
   }
   return null;
 }
@@ -143,6 +175,7 @@ export function bankReducer(state: BankState, action: BankAction): BankState {
         currency: action.currency ?? DEFAULT_CURRENCY,
         balanceCents: 0,
         transactions: [],
+        status: 'open',
       };
 
       return {
@@ -157,6 +190,23 @@ export function bankReducer(state: BankState, action: BankAction): BankState {
       }
 
       return { ...state, selectedAccountId: action.id };
+    }
+    case 'account/close': {
+      const account = getAccount(state, action.id);
+      if (account === undefined || validateAccountClose(account) !== null) {
+        return state;
+      }
+
+      // The closed account stays selected so the teller sees the outcome;
+      // its ledger remains readable, only new transactions are refused.
+      return {
+        ...state,
+        accounts: state.accounts.map((candidate) =>
+          candidate.id === account.id
+            ? { ...candidate, status: 'closed', closedAt: action.closedAt }
+            : candidate,
+        ),
+      };
     }
     case 'transaction/apply': {
       const account = getAccount(state, action.accountId);

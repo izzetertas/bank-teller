@@ -45,6 +45,27 @@ test('dashboard with transactions has no accessibility violations', async ({
   await expectNoViolations(page);
 });
 
+test('close-account dialog and a closed account have no accessibility violations', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await openAccount(page, 'Ada Lovelace');
+  await page.getByRole('button', { name: 'Close account' }).click();
+  await expect(page.getByRole('dialog', { name: 'Close account' })).toBeVisible();
+  await expectNoViolations(page);
+
+  await page.getByRole('button', { name: 'Close this account' }).click();
+  await expect(page.getByRole('note')).toBeVisible();
+  // Dismiss the confirmation toast: mid-fade-in its blended colors would be
+  // reported as a contrast failure that no user ever sees settled.
+  const toasts = page.getByRole('status').getByRole('button');
+  for (const toast of await toasts.all()) {
+    await toast.click({ timeout: 1000 }).catch(() => {}); // may auto-dismiss mid-click
+  }
+  await expect(toasts).toHaveCount(0);
+  await expectNoViolations(page);
+});
+
 test('switch-account modal has no accessibility violations', async ({
   page,
 }) => {

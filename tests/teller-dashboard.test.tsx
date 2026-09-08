@@ -345,4 +345,63 @@ describe('teller dashboard', () => {
     expect(depositRow).toHaveTextContent('$100.00');
     expect(depositRow?.textContent).not.toContain('+');
   });
+
+  it('closes an empty account after confirmation and freezes it', async () => {
+    const user = userEvent.setup();
+    await openAccount(user, 'Ada');
+    await submitTransaction(user, 'Deposit', '30');
+    await submitTransaction(user, 'Withdrawal', '30');
+
+    await user.click(screen.getByRole('button', { name: 'Close account' }));
+    const dialog = screen.getByRole('dialog', { name: 'Close account' });
+    expect(within(dialog).getByText(/Close ACC-1001 for Ada\?/)).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveFocus();
+    await user.click(within(dialog).getByRole('button', { name: 'Close this account' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Account ACC-1001 closed');
+    expect(within(balancePanel()).getByText('Closed')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Close account' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Deposit cash' })).not.toBeInTheDocument();
+    expect(screen.getByRole('note')).toHaveTextContent(/This account was closed on/);
+    // The ledger survives closing.
+    const history = screen.getByRole('region', { name: 'Transaction history' });
+    expect(within(history).getAllByRole('row')).toHaveLength(3); // header + 2
+  });
+
+  it('refuses to close an account that still holds funds', async () => {
+    const user = userEvent.setup();
+    await openAccount(user, 'Ada');
+    await submitTransaction(user, 'Deposit', '12.50');
+
+    await user.click(screen.getByRole('button', { name: 'Close account' }));
+    const dialog = screen.getByRole('dialog', { name: 'Close account' });
+    expect(within(dialog).getByRole('alert')).toHaveTextContent(
+      'Withdraw the remaining balance of $12.50 before closing',
+    );
+    expect(within(dialog).getByRole('button', { name: 'Close this account' })).toBeDisabled();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Close account' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Deposit cash' })).toBeInTheDocument();
+  });
+
+  it('marks a closed account in the switch-account list and still lets it be viewed', async () => {
+    const user = userEvent.setup();
+    await openAccount(user, 'Ada');
+    await user.click(screen.getByRole('button', { name: 'Close account' }));
+    await user.click(screen.getByRole('button', { name: 'Close this account' }));
+    await openAccount(user, 'Grace');
+
+    await user.click(screen.getByRole('button', { name: 'Switch account' }));
+    const dialog = screen.getByRole('dialog', { name: 'Switch account' });
+    const closedOption = within(dialog).getByRole('button', { name: /Ada/ });
+    expect(closedOption).toHaveTextContent('Closed');
+    await user.click(closedOption);
+
+    expect(within(balancePanel()).getByText('Ada')).toBeInTheDocument();
+    expect(within(balancePanel()).getByText('Closed')).toBeInTheDocument();
+    expect(screen.getByRole('note')).toHaveTextContent(/closed on/);
+  });
 });

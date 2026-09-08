@@ -5,11 +5,23 @@ import {
   getAccount,
   getSelectedAccount,
   initialBankState,
+  isClosed,
+  validateAccountClose,
   validateAccountName,
   validateTransaction,
+  type Account,
   type BankAction,
   type BankState,
 } from '@/domain/bank';
+
+/** Looks up an account the test expects to exist; a missing one fails loudly and narrows the type. */
+function requireAccount(state: BankState, id: string): Account {
+  const account = getAccount(state, id);
+  if (account === undefined) {
+    throw new Error(`Expected account "${id}" to exist`);
+  }
+  return account;
+}
 
 function createAccount(state: BankState, id: string, name: string): BankState {
   return bankReducer(state, { type: 'account/create', id, name });
@@ -43,6 +55,7 @@ describe('account creation', () => {
       currency: 'USD',
       balanceCents: 0,
       transactions: [],
+      status: 'open',
     });
     expect(state.selectedAccountId).toBe('a1');
   });
@@ -166,9 +179,7 @@ describe('validation helpers', () => {
 
   it('validateTransaction reports overdrafts with the current balance', () => {
     const state = apply(createAccount(initialBankState, 'a1', 'Ada'), 'a1', 'deposit', 500);
-    const account = getAccount(state, 'a1');
-    expect(account).toBeDefined();
-    if (account === undefined) return;
+    const account = requireAccount(state, 'a1');
     expect(validateTransaction(account, 'withdrawal', 500)).toBeNull();
     expect(validateTransaction(account, 'withdrawal', 501)).toBe(
       'Insufficient funds — the balance is $5.00',
@@ -176,5 +187,65 @@ describe('validation helpers', () => {
     expect(validateTransaction(account, 'deposit', 0)).toBe(
       'Amount must be greater than zero',
     );
+  });
+});
+
+describe('closing accounts', () => {
+  const closedAt = 1_700_000_500_000;
+
+  function close(state: BankState, id: string): BankState {
+    return bankReducer(state, { type: 'account/close', id, closedAt });
+  }
+
+  it('closes a zero-balance account, stamps the time, and keeps it selected', () => {
+    let state = createAccount(initialBankState, 'a1', 'Ada');
+    state = apply(state, 'a1', 'deposit', 500);
+    state = apply(state, 'a1', 'withdrawal', 500);
+    state = close(state, 'a1');
+
+    const account = requireAccount(state, 'a1');
+    expect(isClosed(account)).toBe(true);
+    expect(account.status).toBe('closed');
+    expect(account.closedAt).toBe(closedAt);
+    expect(account.transactions).toHaveLength(2); // ledger is preserved
+    expect(state.selectedAccountId).toBe('a1');
+    expect(state.accounts).toHaveLength(1); // never deleted
+  });
+
+  it('rejects closing an account that still holds funds', () => {
+    const funded = apply(createAccount(initialBankState, 'a1', 'Ada'), 'a1', 'deposit', 1);
+    expect(close(funded, 'a1')).toBe(funded);
+  });
+
+  it('rejects closing twice and ignores unknown accounts', () => {
+    const closed = close(createAccount(initialBankState, 'a1', 'Ada'), 'a1');
+    expect(close(closed, 'a1')).toBe(closed);
+    expect(close(closed, 'nope')).toBe(closed);
+  });
+
+  it('refuses transactions on a closed account', () => {
+    const closed = close(createAccount(initialBankState, 'a1', 'Ada'), 'a1');
+    expect(apply(closed, 'a1', 'deposit', 100)).toBe(closed);
+    expect(apply(closed, 'a1', 'withdrawal', 100)).toBe(closed);
+  });
+
+  it('keeps the name reserved, so it cannot be reused by a new account', () => {
+    const closed = close(createAccount(initialBankState, 'a1', 'Ada'), 'a1');
+    expect(createAccount(closed, 'a2', 'ada')).toBe(closed);
+  });
+
+  it('validateAccountClose and validateTransaction explain each rejection', () => {
+    let state = createAccount(initialBankState, 'a1', 'Ada');
+    const empty = requireAccount(state, 'a1');
+    state = apply(state, 'a1', 'deposit', 1250);
+    const funded = requireAccount(state, 'a1');
+    const closed = requireAccount(close(createAccount(initialBankState, 'a2', 'Grace'), 'a2'), 'a2');
+
+    expect(validateAccountClose(empty)).toBeNull();
+    expect(validateAccountClose(funded)).toBe(
+      'Withdraw the remaining balance of $12.50 before closing',
+    );
+    expect(validateAccountClose(closed)).toBe('This account is already closed');
+    expect(validateTransaction(closed, 'deposit', 100)).toBe('This account is closed');
   });
 });

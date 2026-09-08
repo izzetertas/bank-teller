@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 
 import { Avatar } from '@/components/ui';
-import type { Account } from '@/domain/bank';
+import { isClosed, type Account } from '@/domain/bank';
 import { formatCents } from '@/domain/money';
 
 type AccountListItemProps = {
@@ -33,6 +33,7 @@ export function AccountListItem({
             <span className="account-option-title">
               <span>{account.name}</span>
               {current && <span className="current-tag">Current</span>}
+              {isClosed(account) && <span className="closed-tag">Closed</span>}
             </span>
             <span className="account-option-number">{account.number}</span>
           </span>

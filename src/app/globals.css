@@ -90,6 +90,9 @@
   .btn-inverted {
     @apply border-0 bg-panel text-ink hover:bg-panel-alt;
   }
+  .btn-danger-ghost {
+    @apply border-0 bg-transparent font-medium text-danger hover:bg-danger-soft;
+  }
   .btn-md {
     @apply px-5 py-2.5;
   }
@@ -128,8 +131,23 @@
   .account-number {
     @apply mb-0 mt-1 font-mono text-sm tracking-[0.12em] text-soft;
   }
+  /* Negative margin cancels the ghost button's padding so its text aligns with the number. */
+  .account-meta-actions {
+    @apply -ml-3.5 mt-1;
+  }
   .balance {
     @apply m-0 mt-0.5 animate-balance-flash font-mono text-[clamp(1.6rem,6vw,2.2rem)] font-bold tabular-nums;
+  }
+  .closed-tag {
+    @apply rounded-md bg-danger-soft px-2 py-0.5 text-[0.72rem] font-semibold uppercase tracking-wider text-danger;
+  }
+  /*
+   * Callout, not a field: the danger-colored left rule ties it to the
+   * "Closed" tag without reading as an error. text-ink, not text-soft, keeps
+   * contrast above the AA bar.
+   */
+  .closed-notice {
+    @apply m-0 rounded-md border border-line border-l-4 border-l-danger bg-panel px-4 py-3 text-sm text-ink;
   }
 
   /* Transaction form */

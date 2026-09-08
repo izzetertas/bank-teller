@@ -41,4 +41,20 @@ describe('useBank', () => {
     expect(firstAccount?.transactions[0]?.id).toBeTruthy();
     expect(firstAccount?.transactions[0]?.timestamp).toBeGreaterThan(0);
   });
+
+  it('closes an account and supplies the closing timestamp', () => {
+    const { result } = renderHook(() => useBank(), { wrapper: BankProvider });
+
+    let accountId = '';
+    act(() => {
+      accountId = result.current.createAccount('Ada');
+    });
+    act(() => result.current.closeAccount(accountId));
+
+    const account = result.current.state.accounts.find(
+      (candidate) => candidate.id === accountId,
+    );
+    expect(account?.status).toBe('closed');
+    expect(account?.closedAt).toBeGreaterThan(0);
+  });
 });

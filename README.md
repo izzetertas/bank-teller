@@ -60,6 +60,27 @@ npm run start      # serve out/ at http://localhost:3000, exactly as production 
   keyboard-operable: arrow keys move through the options, Tab focus is trapped
   inside, and Escape, the × button, or clicking the backdrop close it.
 
+### Closing accounts
+
+- An open account shows a quiet, red-text **Close account** button under the
+  account number, away from the name row's everyday actions, so the
+  destructive action never competes with them. It opens a confirmation modal ("Close ACC-1001 for Ada? …") with Cancel and
+  **Close this account** buttons; focus lands on Cancel, and Escape, ×, the
+  backdrop, or Cancel dismiss it without changes.
+- Only a zero-balance account can be closed. With funds remaining the modal
+  shows "Withdraw the remaining balance of $X.XX before closing" and the
+  confirm button is disabled; money is never written off implicitly. The
+  reducer enforces the same rule defensively.
+- Closing is irreversible and confirmed with the toast "Account ACC-1001
+  closed". Its `status` flips from `open` to `closed`, recording the closing
+  time. The account stays in the session — it is never deleted, so account
+  numbers are never reused and its ledger stays viewable — but it is marked
+  **Closed** next to the name and in the switch-account list, the transaction
+  form is replaced by a note ("This account was closed on Sep 8, 2026. …"),
+  and any transaction against it is rejected with "This account is closed".
+- A closed account keeps its customer name, so the uniqueness rule still
+  applies: a new account cannot reuse the name of a closed one.
+
 ### Transactions
 
 - Two transaction types: **deposit** and **withdrawal**, chosen with a segmented
@@ -108,7 +129,8 @@ npm run start      # serve out/ at http://localhost:3000, exactly as production 
 
 - A transient toast notification confirms each successful action: opening an
   account ("Account opened for Ada"), a deposit ("Deposited $100.00 — balance
-  $100.00"), and a withdrawal ("Withdrew $40.00 — balance $60.00").
+  $100.00"), a withdrawal ("Withdrew $40.00 — balance $60.00"), and closing an
+  account ("Account ACC-1001 closed").
 - Toasts appear top-center (full-width on small screens) with a green check
   icon, auto-dismiss after 3 seconds, and can be dismissed early by clicking
   them. At most three are visible at once — older ones are dropped so the stack
@@ -136,8 +158,9 @@ src/
                 form, transaction list + row
   components/ui/  Reusable primitives: Avatar, Button/LinkButton, ErrorNote,
                 Field, MicroLabel, Modal, PageLayout, Panel, TextInput
-  domain/       Pure domain logic — money parsing/formatting (money.ts) and
-                the account/transaction model + reducer (bank.ts)
+  domain/       Pure domain logic — money parsing/formatting (money.ts), date
+                formatting (time.ts), and the account/transaction model +
+                reducer (bank.ts)
   state/        React contexts: bank reducer (bank-context.tsx) and toast
                 notifications (toast-context.tsx)
 tests/          Vitest suites: unit tests for the pure domain logic, jsdom

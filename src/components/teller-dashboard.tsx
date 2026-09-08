@@ -7,6 +7,7 @@ import { TransactionForm } from '@/components/transaction-form';
 import { TransactionList } from '@/components/transaction-list';
 import { LinkButton, MicroLabel, PageLayout, Panel } from '@/components/ui';
 import { getSelectedAccount } from '@/domain/bank';
+import { formatDate } from '@/domain/time';
 import { useBank } from '@/state/bank-context';
 
 export function TellerDashboard(): ReactNode {
@@ -37,7 +38,16 @@ export function TellerDashboard(): ReactNode {
         <Panel aria-label="Selected account">
           <AccountDetails account={account} />
           <hr className="divider" />
-          <TransactionForm account={account} />
+          {account.status === 'open' ? (
+            <TransactionForm account={account} />
+          ) : (
+            <p className="closed-notice" role="note">
+              This account was closed
+              {account.closedAt !== undefined && ` on ${formatDate(account.closedAt)}`}. No
+              further transactions can be made. The ledger below is kept for
+              reference.
+            </p>
+          )}
           <hr className="divider" />
           <section aria-label="Transaction history">
             <MicroLabel>Transaction ledger</MicroLabel>

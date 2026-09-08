@@ -23,6 +23,8 @@ export interface BankApi {
    */
   createAccount(name: string, currency?: string): string;
   selectAccount(id: string): void;
+  /** Closes a zero-balance account; it stays viewable but refuses transactions. */
+  closeAccount(id: string): void;
   applyTransaction(
     accountId: string,
     type: TransactionType,
@@ -45,6 +47,9 @@ export function BankProvider({ children }: { children: ReactNode }): ReactNode {
       },
       selectAccount(id: string): void {
         dispatch({ type: 'account/select', id });
+      },
+      closeAccount(id: string): void {
+        dispatch({ type: 'account/close', id, closedAt: Date.now() });
       },
       applyTransaction(
         accountId: string,

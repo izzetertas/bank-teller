@@ -8,6 +8,8 @@ const variants = {
   secondary: 'btn-secondary',
   /** Cream-filled, for placement on the dark page ground. */
   inverted: 'btn-inverted',
+  /** Borderless, danger-toned text: for rare destructive actions that must not compete visually. */
+  'danger-ghost': 'btn-danger-ghost',
 } as const;
 
 const sizes = {
