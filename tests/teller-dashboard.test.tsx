@@ -345,4 +345,144 @@ describe('teller dashboard', () => {
     expect(depositRow).toHaveTextContent('$100.00');
     expect(depositRow?.textContent).not.toContain('+');
   });
+
+  describe('ledger view controls', () => {
+    const history = (): HTMLElement =>
+      screen.getByRole('region', { name: 'Transaction history' });
+    const bodyRows = (): HTMLElement[] => within(history()).getAllByRole('row').slice(1);
+    const filterToggle = (): HTMLElement =>
+      within(history()).getByRole('button', { name: /^Filter/ });
+
+    async function seedLedger(user: UserEvent): Promise<void> {
+      await openAccount(user, 'Ada');
+      await submitTransaction(user, 'Deposit', '100');
+      await submitTransaction(user, 'Withdrawal', '40');
+      await submitTransaction(user, 'Deposit', '5');
+    }
+
+    async function openFilters(user: UserEvent): Promise<void> {
+      await user.click(filterToggle());
+    }
+
+    it('reveals the filter toolbar from the heading and hides it again', async () => {
+      const user = userEvent.setup();
+      await seedLedger(user);
+      expect(within(history()).queryByLabelText('Type')).not.toBeInTheDocument();
+      expect(filterToggle()).toHaveAttribute('aria-expanded', 'false');
+
+      await openFilters(user);
+      expect(filterToggle()).toHaveAttribute('aria-expanded', 'true');
+      expect(within(history()).getByLabelText('Search')).toHaveFocus();
+
+      await user.click(filterToggle());
+      expect(within(history()).queryByLabelText('Type')).not.toBeInTheDocument();
+      expect(filterToggle()).toHaveAttribute('aria-expanded', 'false');
+      expect(filterToggle()).toHaveFocus();
+    });
+
+    it('filters by type and reports the visible count', async () => {
+      const user = userEvent.setup();
+      await seedLedger(user);
+      expect(history()).toHaveTextContent('3 transactions');
+
+      await openFilters(user);
+      await user.selectOptions(within(history()).getByLabelText('Type'), 'Withdrawals');
+      expect(bodyRows()).toHaveLength(1);
+      expect(bodyRows()[0]).toHaveTextContent('Withdrawal');
+      expect(history()).toHaveTextContent('1 of 3 transactions');
+    });
+
+    it('searches by amount and offers to clear an empty result', async () => {
+      const user = userEvent.setup();
+      await seedLedger(user);
+      await openFilters(user);
+
+      const search = within(history()).getByLabelText('Search');
+      await user.type(search, '40');
+      expect(bodyRows()).toHaveLength(1);
+      expect(bodyRows()[0]).toHaveTextContent('$40.00');
+
+      await user.clear(search);
+      await user.type(search, 'nothing');
+      expect(within(history()).getByText('No transactions match.')).toBeInTheDocument();
+      expect(history()).toHaveTextContent('0 of 3 transactions');
+
+      await user.click(within(history()).getByRole('button', { name: 'Clear filters' }));
+      expect(bodyRows()).toHaveLength(3);
+      expect(search).toHaveValue('');
+      expect(search).toHaveFocus();
+    });
+
+    it('counts active filters on the collapsed toggle and clears them from the summary', async () => {
+      const user = userEvent.setup();
+      await seedLedger(user);
+      await openFilters(user);
+      await user.selectOptions(within(history()).getByLabelText('Type'), 'Deposits');
+      await user.type(within(history()).getByLabelText('Search'), '5');
+      await user.click(filterToggle());
+
+      expect(filterToggle()).toHaveTextContent('Filter2');
+      expect(history()).toHaveTextContent('1 of 3 transactions');
+
+      await user.click(within(history()).getByRole('button', { name: 'Clear filters' }));
+      expect(filterToggle()).toHaveTextContent(/^Filter$/);
+      expect(bodyRows()).toHaveLength(3);
+      expect(filterToggle()).toHaveFocus();
+      expect(
+        within(history()).queryByRole('button', { name: 'Clear filters' }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('sorts by amount from the column header and announces the direction', async () => {
+      const user = userEvent.setup();
+      await seedLedger(user);
+
+      const amountHeader = within(history()).getByRole('columnheader', { name: /Amount/ });
+      expect(within(history()).getByRole('columnheader', { name: /Time/ })).toHaveAttribute(
+        'aria-sort',
+        'descending',
+      );
+
+      await user.click(within(history()).getByRole('button', { name: 'Amount' }));
+      expect(amountHeader).toHaveAttribute('aria-sort', 'descending');
+      expect(bodyRows()[0]).toHaveTextContent('$100.00');
+
+      await user.click(within(history()).getByRole('button', { name: 'Amount' }));
+      expect(amountHeader).toHaveAttribute('aria-sort', 'ascending');
+      expect(bodyRows()[0]).toHaveTextContent('$5.00');
+
+      await user.click(within(history()).getByRole('button', { name: 'Time' }));
+      expect(bodyRows()[0]).toHaveTextContent('$5.00'); // newest first again
+      expect(amountHeader).toHaveAttribute('aria-sort', 'none');
+    });
+
+    it('totals money in and out for the visible rows', async () => {
+      const user = userEvent.setup();
+      await seedLedger(user);
+      expect(history()).toHaveTextContent('In $105.00');
+      expect(history()).toHaveTextContent('Out −$40.00');
+
+      await openFilters(user);
+      await user.selectOptions(within(history()).getByLabelText('Type'), 'Deposits');
+      expect(history()).toHaveTextContent('In $105.00');
+      expect(history()).toHaveTextContent('Out −$0.00');
+    });
+
+    it('resets the view when switching to another account', async () => {
+      const user = userEvent.setup();
+      await seedLedger(user);
+      await openFilters(user);
+      await user.selectOptions(within(history()).getByLabelText('Type'), 'Withdrawals');
+      await openAccount(user, 'Grace');
+      expect(screen.getByText('No transactions yet.')).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: 'Switch account' }));
+      const dialog = screen.getByRole('dialog', { name: 'Switch account' });
+      await user.click(within(dialog).getByRole('button', { name: /Ada/ }));
+      expect(filterToggle()).toHaveAttribute('aria-expanded', 'false');
+      expect(filterToggle()).toHaveTextContent(/^Filter$/);
+      expect(within(history()).queryByLabelText('Type')).not.toBeInTheDocument();
+      expect(bodyRows()).toHaveLength(3);
+    });
+  });
 });

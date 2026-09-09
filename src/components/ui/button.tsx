@@ -8,6 +8,8 @@ const variants = {
   secondary: 'btn-secondary',
   /** Cream-filled, for placement on the dark page ground. */
   inverted: 'btn-inverted',
+  /** Borderless, accent text: for quiet secondary actions inside dense UI. */
+  ghost: 'btn-ghost',
 } as const;
 
 const sizes = {

@@ -45,6 +45,24 @@ test('dashboard with transactions has no accessibility violations', async ({
   await expectNoViolations(page);
 });
 
+test('ledger view controls have no accessibility violations', async ({ page }) => {
+  await page.goto('/');
+  await openAccount(page, 'Ada Lovelace');
+  await page.getByLabel(/Amount/).fill('120');
+  await page.getByRole('button', { name: 'Deposit cash' }).click();
+  await page.getByRole('button', { name: 'Withdraw', exact: true }).click();
+  await page.getByLabel(/Amount/).fill('45.50');
+  await page.getByRole('button', { name: 'Withdraw cash' }).click();
+
+  const history = page.getByRole('region', { name: 'Transaction history' });
+  await history.getByRole('button', { name: /^Filter/ }).click();
+  await history.getByLabel('Type').selectOption('Withdrawals');
+  await history.getByLabel('Search').fill('45');
+  await history.getByRole('button', { name: 'Amount' }).click();
+  await expect(history.getByRole('row')).toHaveCount(2);
+  await expectNoViolations(page);
+});
+
 test('switch-account modal has no accessibility violations', async ({
   page,
 }) => {

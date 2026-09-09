@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import { AccountDetails } from '@/components/account-details';
 import { TransactionForm } from '@/components/transaction-form';
 import { TransactionList } from '@/components/transaction-list';
-import { LinkButton, MicroLabel, PageLayout, Panel } from '@/components/ui';
+import { LinkButton, PageLayout, Panel } from '@/components/ui';
 import { getSelectedAccount } from '@/domain/bank';
 import { useBank } from '@/state/bank-context';
 
@@ -40,8 +40,12 @@ export function TellerDashboard(): ReactNode {
           <TransactionForm account={account} />
           <hr className="divider" />
           <section aria-label="Transaction history">
-            <MicroLabel>Transaction ledger</MicroLabel>
-            <TransactionList transactions={account.transactions} currency={account.currency} />
+            {/* Keyed by account so filter and sort state never leak across accounts. */}
+            <TransactionList
+              key={account.id}
+              transactions={account.transactions}
+              currency={account.currency}
+            />
           </section>
         </Panel>
       )}

@@ -94,6 +94,9 @@
   .btn-inverted {
     @apply border-0 bg-panel text-ink hover:bg-panel-alt focus-visible:outline-cream;
   }
+  .btn-ghost {
+    @apply border-0 bg-transparent text-accent hover:bg-panel-alt;
+  }
   .btn-md {
     @apply px-5 py-2.5;
   }
@@ -170,7 +173,7 @@
     @apply border-b-2 border-ink px-2.5 py-2 text-left text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-soft;
   }
   .ledger-td {
-    @apply border-b border-line px-2.5 py-2 font-mono;
+    @apply whitespace-nowrap border-b border-line px-2.5 py-2 font-mono;
   }
   /* Numeric column: right-aligned with tabular figures. */
   .ledger-num {
@@ -178,6 +181,32 @@
   }
   .ledger-type {
     @apply font-sans font-semibold;
+  }
+  .ledger-heading {
+    @apply flex items-center justify-between gap-3;
+  }
+  /* Count of active filters, shown on the toggle so a collapsed toolbar never hides them. */
+  .filter-badge {
+    @apply ml-1.5 inline-flex min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[0.7rem] font-bold text-white;
+  }
+  .ledger-toolbar {
+    @apply mt-2 flex flex-wrap gap-3;
+  }
+  .ledger-empty {
+    @apply m-0 mt-3 flex flex-wrap items-center gap-2 text-soft;
+  }
+  /* A column header that sorts: styled as the header text itself, not as a button. */
+  .ledger-sort {
+    @apply inline-flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0 text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-soft hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent;
+  }
+  .ledger-sort.active {
+    @apply text-ink;
+  }
+  .ledger-sort-arrow {
+    @apply text-[0.8rem] tracking-normal;
+  }
+  .ledger-summary {
+    @apply mb-0 mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm tabular-nums text-soft;
   }
 
   /* Modal */

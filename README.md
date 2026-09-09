@@ -77,6 +77,37 @@ npm run start      # serve out/ at http://localhost:3000, exactly as production 
   colored amount (green for deposits; red with a `−` sign for withdrawals),
   and a "Balance after" column.
 
+### Ledger view: filter, search, sort, totals
+
+- Once an account has transactions, a **Filter** button sits to the right of
+  the "Transaction ledger" heading. It toggles a toolbar (`aria-expanded`)
+  with a **Type** dropdown (All types / Deposits / Withdrawals) and a
+  **Search** box; opening it moves focus into the search box, closing it
+  returns focus to the button. Search matches the amount however it is typed
+  ("1,234.56", "$1234.56", "234") and the type label ("dep"),
+  case-insensitively.
+- Filters keep working while the toolbar is collapsed; the button then shows
+  a badge with the number of active filters ("Filter 2"), so nothing is ever
+  hidden silently.
+- Whenever a filter is active, a **Clear filters** button appears next to the
+  summary count (and in the "No transactions match." empty state). It resets
+  the type and search but leaves the sort order alone; focus lands in the
+  search box if the toolbar is open, otherwise on the Filter button.
+- The **Time** and **Amount** column headers sort. Clicking a header sorts by
+  it, largest or newest first; clicking again flips the direction. The active
+  header carries `aria-sort` and an arrow. Equal amounts keep their
+  chronological order (stable sort).
+- A summary line under the table reads "N transactions" — or
+  "N of M transactions" while a filter is active — followed by "In $X" and
+  "Out −$Y" totals for the visible rows. An empty result shows
+  "No transactions match." with the count at 0.
+- Filter, search, sort, and the toolbar's open state are view state only:
+  they never change the account, and they reset when the teller switches to
+  another account.
+- The logic lives in `src/domain/ledger.ts` as pure functions
+  (`filterTransactions`, `sortTransactions`, `summarizeTransactions`), unit-
+  tested in `tests/domain/ledger.test.ts`.
+
 ### Amount input and validation
 
 - All monetary values are handled internally as **integer cents** — floating-point
@@ -133,7 +164,7 @@ src/
                 accounts/new page, error / global-error / not-found pages,
                 global styles
   components/   Feature UI: teller dashboard, account selector, transaction
-                form, transaction list + row
+                form, transaction list + filter toolbar + row
   components/ui/  Reusable primitives: Avatar, Button/LinkButton, ErrorNote,
                 Field, MicroLabel, Modal, PageLayout, Panel, TextInput
   domain/       Pure domain logic — money parsing/formatting (money.ts) and

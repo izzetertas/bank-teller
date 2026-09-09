@@ -50,6 +50,7 @@ describe('Button', () => {
   it.each([
     ['secondary', 'btn-secondary'],
     ['inverted', 'btn-inverted'],
+    ['ghost', 'btn-ghost'],
   ] as const)('maps the %s variant to %s', (variant, expected) => {
     render(<Button variant={variant}>Go</Button>);
     expect(screen.getByRole('button', { name: 'Go' })).toHaveClass(expected);
