@@ -34,7 +34,9 @@ describe('error page', () => {
 
   it('falls back to a generic message when the error has none', () => {
     render(<ErrorPage error={new Error('')} reset={() => {}} />);
-    expect(screen.getByText('An unexpected error occurred.')).toBeInTheDocument();
+    expect(
+      screen.getByText('An unexpected error occurred.'),
+    ).toBeInTheDocument();
   });
 });
 

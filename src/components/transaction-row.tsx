@@ -2,8 +2,8 @@
 
 import type { ReactNode } from 'react';
 
-import type { Transaction } from '@/domain/bank';
-import { formatCents } from '@/domain/money';
+import type { Transaction } from '@/domain/models';
+import { formatCents } from '@/domain/amount';
 
 const timeFormatter = new Intl.DateTimeFormat('en-US', {
   month: 'short',
@@ -27,7 +27,9 @@ export function TransactionRow({
 
   return (
     <tr className="odd:bg-panel-alt">
-      <td className="ledger-td">{timeFormatter.format(transaction.timestamp)}</td>
+      <td className="ledger-td">
+        {timeFormatter.format(transaction.timestamp)}
+      </td>
       <td className="ledger-td">
         <span className={`ledger-type ${tone}`}>
           {isDeposit ? 'Deposit' : 'Withdrawal'}

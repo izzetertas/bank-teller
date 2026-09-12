@@ -7,8 +7,7 @@
 export const MAX_TRANSACTION_CENTS = 100_000_000_000;
 
 export type ParseAmountResult =
-  | { ok: true; cents: number }
-  | { ok: false; error: string };
+  { ok: true; cents: number } | { ok: false; error: string };
 
 /** Optional "$", whole units, optional 1–2 decimals: "25", "25.5", "$25.50". */
 const AMOUNT_PATTERN = /^\$?(\d+)(?:\.(\d{1,2}))?$/;
@@ -55,7 +54,10 @@ export const DEFAULT_CURRENCY = 'USD';
 const formatters = new Map<string, Intl.NumberFormat>();
 
 /** Formats integer cents as a currency string, e.g. 123456 -> "$1,234.56". */
-export function formatCents(cents: number, currency: string = DEFAULT_CURRENCY): string {
+export function formatCents(
+  cents: number,
+  currency: string = DEFAULT_CURRENCY,
+): string {
   let formatter = formatters.get(currency);
 
   if (formatter === undefined) {

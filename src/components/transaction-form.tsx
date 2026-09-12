@@ -1,10 +1,16 @@
 'use client';
 
-import { type ChangeEvent, useState, type ReactNode, type SubmitEvent } from 'react';
+import {
+  type ChangeEvent,
+  useState,
+  type ReactNode,
+  type SubmitEvent,
+} from 'react';
 
 import { Button, ErrorNote, TextInput } from '@/components/ui';
-import { validateTransaction, type Account, type TransactionType } from '@/domain/bank';
-import { formatCents, parseAmount } from '@/domain/money';
+import type { Account, TransactionType } from '@/domain/models';
+import { validateAmount, validateWithdrawal } from '@/domain/rules';
+import { formatCents, parseAmount } from '@/domain/amount';
 import { useBank } from '@/state/bank-context';
 import { useToast } from '@/state/toast-context';
 
@@ -12,7 +18,7 @@ import { useToast } from '@/state/toast-context';
 const PARTIAL_AMOUNT_PATTERN = /^\$?\d*(\.\d{0,2})?$/;
 
 export function TransactionForm({ account }: { account: Account }): ReactNode {
-  const { applyTransaction } = useBank();
+  const { deposit, withdraw } = useBank();
   const { showToast } = useToast();
   const [type, setType] = useState<TransactionType>('deposit');
   const [amount, setAmount] = useState('');
@@ -33,12 +39,28 @@ export function TransactionForm({ account }: { account: Account }): ReactNode {
       setError(parsed.error);
       return;
     }
-    const validationError = validateTransaction(account, type, parsed.cents);
-    if (validationError !== null) {
-      setError(validationError);
+    const amountValidation = validateAmount(account, parsed.cents);
+    if (!amountValidation.ok) {
+      setError(amountValidation.error);
       return;
     }
-    applyTransaction(account.id, type, parsed.cents);
+    if (type === 'withdrawal') {
+      const overdraftValidation = validateWithdrawal(account, parsed.cents);
+      if (!overdraftValidation.ok) {
+        setError(overdraftValidation.error);
+        return;
+      }
+    }
+    const result =
+      type === 'deposit'
+        ? deposit(account.id, parsed.cents)
+        : withdraw(account.id, parsed.cents);
+    if (!result.ok) {
+      // Backstop: the UI already validated, but the service — the source
+      // of truth — gets the final say, and its message is what we show.
+      setError(result.error);
+      return;
+    }
     const balanceAfter =
       type === 'deposit'
         ? account.balanceCents + parsed.cents
@@ -84,11 +106,7 @@ export function TransactionForm({ account }: { account: Account }): ReactNode {
           placeholder="0.00"
           onChange={handleInputChange}
         />
-        <Button
-          type="submit"
-          className="w-full sm:w-auto"
-          disabled={type === 'withdrawal' && account.balanceCents === 0}
-        >
+        <Button type="submit" className="w-full sm:w-auto">
           {type === 'deposit' ? 'Deposit cash' : 'Withdraw cash'}
         </Button>
       </div>

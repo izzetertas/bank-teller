@@ -17,7 +17,9 @@ export function PageLayout({
       <header className={actions !== undefined ? 'page-header' : undefined}>
         <div>
           <h1 className="page-title">{title}</h1>
-          {subtitle !== undefined && <p className="page-subtitle">{subtitle}</p>}
+          {subtitle !== undefined && (
+            <p className="page-subtitle">{subtitle}</p>
+          )}
         </div>
         {actions}
       </header>

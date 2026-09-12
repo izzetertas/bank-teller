@@ -11,26 +11,30 @@ import {
   Panel,
   TextInput,
 } from '@/components/ui';
-import { validateAccountName } from '@/domain/bank';
+import { validateAccountName } from '@/domain/rules';
 import { useBank } from '@/state/bank-context';
 import { useToast } from '@/state/toast-context';
 
 export default function NewAccountPage(): ReactNode {
   const router = useRouter();
-  const { state, createAccount } = useBank();
+  const { createAccount } = useBank();
   const { showToast } = useToast();
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   function handleSubmit(event: SubmitEvent<HTMLFormElement>): void {
     event.preventDefault();
-    const validationError = validateAccountName(name, state.accounts);
-    if (validationError !== null) {
-      setError(validationError);
+    const validation = validateAccountName(name);
+    if (!validation.ok) {
+      setError(validation.error);
       return;
     }
 
-    createAccount(name);
+    const result = createAccount(name);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
     showToast(`Account opened for ${name.trim()}`);
     router.push('/');
   }

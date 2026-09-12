@@ -17,7 +17,9 @@ async function openAccount(page: Page, name: string): Promise<void> {
   await page.getByRole('link', { name: 'Open account' }).click();
   await page.getByLabel('Customer name').fill(name);
   await page.getByRole('button', { name: 'Save' }).click();
-  await expect(page.getByRole('heading', { name: 'Bank Teller' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Bank Teller' }),
+  ).toBeVisible();
 }
 
 test('empty dashboard has no accessibility violations', async ({ page }) => {

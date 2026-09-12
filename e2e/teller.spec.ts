@@ -24,7 +24,9 @@ async function openAccount(page: Page, name: string): Promise<void> {
   await expect(page).toHaveURL(/\/accounts\/new/);
   await page.getByLabel('Customer name').fill(name);
   await page.getByRole('button', { name: 'Save' }).click();
-  await expect(page.getByRole('heading', { name: 'Bank Teller' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Bank Teller' }),
+  ).toBeVisible();
   await dismissToasts(page);
 }
 
@@ -34,7 +36,6 @@ test('opens an account, deposits and withdraws, and records the ledger', async (
   await page.goto('/');
   await openAccount(page, 'Ada Lovelace');
 
-  // State survived the round-trip navigation; the account is active.
   await expect(page.getByText('ACC-1001')).toBeVisible();
   await expect(page.getByLabel('Current balance')).toHaveText('$0.00');
 

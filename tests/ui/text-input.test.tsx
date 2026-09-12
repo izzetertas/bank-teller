@@ -12,7 +12,9 @@ describe('TextInput', () => {
   });
 
   it('forwards native props and accepts typing', async () => {
-    render(<TextInput aria-label="Amount" type="search" placeholder="Search…" />);
+    render(
+      <TextInput aria-label="Amount" type="search" placeholder="Search…" />,
+    );
     const input = screen.getByLabelText('Amount');
     expect(input).toHaveAttribute('type', 'search');
     expect(input).toHaveAttribute('placeholder', 'Search…');

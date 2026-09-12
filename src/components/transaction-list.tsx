@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 
 import { TransactionRow } from '@/components/transaction-row';
-import type { Transaction } from '@/domain/bank';
+import type { Transaction } from '@/domain/models';
 
 const headerCell = 'ledger-th';
 

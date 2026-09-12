@@ -4,8 +4,8 @@ import type { ReactNode } from 'react';
 
 import { AccountSelector } from '@/components/account-selector';
 import { MicroLabel } from '@/components/ui';
-import type { Account } from '@/domain/bank';
-import { formatCents } from '@/domain/money';
+import type { Account } from '@/domain/models';
+import { formatCents } from '@/domain/amount';
 
 type AccountDetailsProps = {
   account: Account;
