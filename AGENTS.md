@@ -33,8 +33,10 @@ in the same commit (including its Index and `[↑ Index]` back-links).
 ## Repo map
 
 ```
-src/domain/       pure TS: money parsing/formatting, account model, reducer
-src/state/        React contexts wrapping the reducer and toasts
+src/domain/       plain TS, no React: amount parsing/formatting (amount.ts),
+                  account model (models.ts), business rules (rules.ts), the
+                  in-memory account service (account-service.ts)
+src/state/        React contexts: BankProvider wraps the service; toasts
 src/components/   feature UI; src/components/ui/ generic primitives + barrel
 src/app/          Next shell: layout (mounts providers), pages, error pages, globals.css
 tests/            Vitest: domain/, state/, ui/, teller-dashboard.test.tsx, error-pages.test.tsx
@@ -57,18 +59,28 @@ e2e/              Playwright smoke + axe-core a11y scans, against the built out/
 
 ## Architecture rules
 
-- `src/domain/` is pure TypeScript: no React, no side effects, no `Date`, no
-  random. Ids and timestamps come from action creators in `src/state/`, never
-  from the reducer — every transition is deterministic and unit-testable.
+- `src/domain/` has no React. `amount.ts`, `models.ts` and `rules.ts` are pure
+  (no `Date`, no random) and are tested with plain calls. `AccountService` is
+  the one place that generates ids (`crypto.randomUUID`) and timestamps
+  (`Date.now`); its tests use fake timers and assert on shape, not on exact
+  ids.
+- The service is the in-memory "backend": the source of truth and the only
+  place accounts are opened or money moves. The UI never holds business
+  state of its own. A real backend would replace the service behind the same
+  method signatures, not change the UI. `BankProvider` constructs its own
+  instance per mount, used like an API client — no singleton, no shared
+  state, so every render (production or test) starts from an empty bank.
 - Money is **integer cents** everywhere; never do floating-point dollar math.
   Currency is per-account (ISO 4217), defaulting to `DEFAULT_CURRENCY` in
-  `src/domain/money.ts`; always pass `account.currency` to `formatCents`.
-- Validation runs twice on purpose: the UI validates first to show a message,
-  the reducer independently rejects invalid actions (duplicate name,
-  overdraft, bad amount) by returning state unchanged. The rule itself lives
-  once, in a `validate*` function in `src/domain/`; both layers call it.
-- Derived data is not stored. Keep ids in state (`selectedAccountId`) and
-  derive objects with selectors (`getSelectedAccount`); the ledger's
+  `src/domain/amount.ts`; always pass `account.currency` to `formatCents`.
+- Validation runs twice on purpose, in two different shapes. `src/domain/rules.ts`
+  holds the rule once as a `validate*` function returning `{ ok: true } | { ok: false, error }`;
+  the UI calls it directly to show a message without exceptions. The service
+  wraps the same rule and throws when it fails — accounts are opened and
+  money moves through the service alone, so a rejected call stores nothing.
+  The rule is not duplicated; the call shape is.
+- Derived data is not stored. The provider keeps `selectedAccountId` and
+  derives `selectedAccount` from the account list; the ledger's
   `balanceAfterCents` snapshot is the deliberate exception.
 - Provider state lives in the root layout so it survives client-side
   navigation; do not mount providers inside pages.
@@ -106,8 +118,10 @@ e2e/              Playwright smoke + axe-core a11y scans, against the built out/
   `contextValue` not `api`. No single-letter or cryptic names, including
   callback parameters (`(account) =>`, `(left, right) =>`); idiomatic
   exceptions are `event` in handlers and loop indexes.
-- Expected failures are return values (`{ ok: false, error }`, `string | null`),
-  not thrown errors. Reducers never throw.
+- Expected failures are discriminated-union return values (`{ ok: true }` / `{ ok: false, error }`),
+  not thrown errors, in `rules.ts` and `amount.ts` — the UI needs to branch
+  on them without a `try/catch`. `AccountService` is the exception: like an
+  API client, it throws when a call cannot be satisfied.
 - Comments explain *why* (a constraint, a browser quirk, a deliberate
   trade-off), not *what* the next line does.
 

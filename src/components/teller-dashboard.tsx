@@ -6,12 +6,10 @@ import { AccountDetails } from '@/components/account-details';
 import { TransactionForm } from '@/components/transaction-form';
 import { TransactionList } from '@/components/transaction-list';
 import { LinkButton, MicroLabel, PageLayout, Panel } from '@/components/ui';
-import { getSelectedAccount } from '@/domain/bank';
 import { useBank } from '@/state/bank-context';
 
 export function TellerDashboard(): ReactNode {
-  const { state } = useBank();
-  const account = getSelectedAccount(state);
+  const { selectedAccount: account } = useBank();
 
   return (
     <PageLayout
@@ -37,7 +35,10 @@ export function TellerDashboard(): ReactNode {
         <Panel aria-label="Selected account">
           <AccountDetails account={account} />
           <hr className="divider" />
-          <TransactionForm account={account} />
+          {/* Remounts on every account switch: the deposit/withdraw toggle,
+              in-progress amount, and any error are per-account, never carried
+              over from whichever account was selected before. */}
+          <TransactionForm key={account.id} account={account} />
           <hr className="divider" />
           <section aria-label="Transaction history">
             <MicroLabel>Transaction ledger</MicroLabel>

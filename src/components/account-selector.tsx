@@ -10,11 +10,22 @@ import {
 
 import { AccountListItem } from '@/components/account-list-item';
 import { Button, Field, Modal, TextInput } from '@/components/ui';
-import { getSelectedAccount, type Account } from '@/domain/bank';
+import type { Account } from '@/domain/models';
 import { useBank } from '@/state/bank-context';
 
+function searchAccounts(accounts: readonly Account[], query: string): readonly Account[] {
+  const normalizedQuery = query.trim().toLowerCase();
+  return accounts
+    .filter(
+      (account) =>
+        account.name.toLowerCase().includes(normalizedQuery) ||
+        account.number.toLowerCase().includes(normalizedQuery),
+    )
+    .sort((left, right) => left.name.localeCompare(right.name));
+}
+
 export function AccountSelector(): ReactNode {
-  const { state, selectAccount } = useBank();
+  const { accounts, selectedAccount: selected, selectAccount } = useBank();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
@@ -26,20 +37,11 @@ export function AccountSelector(): ReactNode {
     }
   }, [open]);
 
-  const selected = getSelectedAccount(state);
-  if (selected === undefined || state.accounts.length < 2) {
+  if (selected === undefined || accounts.length < 2) {
     return null;
   }
 
-  const normalizedQuery = query.trim().toLowerCase();
-  const matches = state.accounts.filter(
-    (account) =>
-      account.name.toLowerCase().includes(normalizedQuery) ||
-      account.number.toLowerCase().includes(normalizedQuery),
-  );
-  const orderedAccounts: readonly Account[] = [...matches].sort((left, right) =>
-    left.name.localeCompare(right.name),
-  );
+  const orderedAccounts = searchAccounts(accounts, query);
 
   function close(): void {
     setOpen(false);

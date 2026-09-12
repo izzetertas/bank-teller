@@ -2,8 +2,8 @@
 
 import type { ReactNode } from 'react';
 
-import type { Transaction } from '@/domain/bank';
-import { formatCents } from '@/domain/money';
+import type { Transaction } from '@/domain/models';
+import { formatCents } from '@/domain/amount';
 
 const timeFormatter = new Intl.DateTimeFormat('en-US', {
   month: 'short',

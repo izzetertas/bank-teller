@@ -103,7 +103,6 @@ describe('teller dashboard', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent('Customer name is required');
 
-    // Cancel returns to the dashboard without creating an account.
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(
       screen.getByText('No accounts yet — click “Open account” to get started.'),
@@ -189,11 +188,9 @@ describe('teller dashboard', () => {
     await submitTransaction(user, 'Deposit', '100');
     await openAccount(user, 'Grace');
 
-    // The newly opened account is active and empty.
     expect(within(balancePanel()).getByText('Grace')).toBeInTheDocument();
     expect(screen.getByLabelText('Current balance')).toHaveTextContent('$0.00');
 
-    // Switching happens through the modal: search, then pick the account.
     await user.click(screen.getByRole('button', { name: 'Switch account' }));
     const dialog = screen.getByRole('dialog', { name: 'Switch account' });
     await user.type(within(dialog).getByLabelText('Search accounts'), 'ada');
@@ -205,23 +202,41 @@ describe('teller dashboard', () => {
     expect(screen.getByLabelText('Current balance')).toHaveTextContent('$100.00');
   });
 
-  it('rejects opening a second account with the same customer name', async () => {
+  it('resets the deposit/withdraw toggle to Deposit when switching accounts', async () => {
     const user = userEvent.setup();
     await openAccount(user, 'Ada');
-
-    await user.click(screen.getByRole('link', { name: 'Open account' }));
-    await user.type(screen.getByLabelText('Customer name'), 'ada');
-    await user.click(screen.getByRole('button', { name: 'Save' }));
-
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      'An account for “ada” already exists',
+    await submitTransaction(user, 'Deposit', '50');
+    await user.click(screen.getByRole('button', { name: 'Withdraw' }));
+    expect(screen.getByRole('button', { name: 'Withdraw' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
     );
 
-    // Still on the form; no second account was created.
-    await user.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(
-      screen.queryByRole('button', { name: 'Switch account' }),
-    ).not.toBeInTheDocument();
+    await openAccount(user, 'Grace');
+    await user.click(screen.getByRole('button', { name: 'Switch account' }));
+    const dialog = screen.getByRole('dialog', { name: 'Switch account' });
+    await user.click(within(dialog).getByRole('button', { name: /Ada/ }));
+
+    expect(screen.getByRole('button', { name: 'Deposit' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'Withdraw' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+  });
+
+  it('opens a second account for the same customer name as a separate account', async () => {
+    const user = userEvent.setup();
+    await openAccount(user, 'Ada');
+    await openAccount(user, 'Ada');
+
+    expect(within(balancePanel()).getByText('ACC-1002')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Switch account' }));
+    const dialog = screen.getByRole('dialog', { name: 'Switch account' });
+    expect(within(dialog).getAllByText('Ada')).toHaveLength(2);
+    expect(within(dialog).getByRole('button', { name: /ACC-1001/ })).toBeInTheDocument();
   });
 
   it('marks the current account in the switch-account modal and disables it', async () => {
@@ -306,7 +321,6 @@ describe('teller dashboard', () => {
     await user.tab({ shift: true });
     expect(within(dialog).getByRole('button', { name: /Ada/ })).toHaveFocus();
 
-    // Escape closes the modal and returns focus to the trigger.
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Switch account' })).toHaveFocus();

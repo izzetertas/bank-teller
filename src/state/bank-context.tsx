@@ -4,70 +4,96 @@ import {
   createContext,
   useContext,
   useMemo,
-  useReducer,
+  useState,
   type ReactNode,
 } from 'react';
 
-import {
-  bankReducer,
-  initialBankState,
-  type BankState,
-  type TransactionType,
-} from '@/domain/bank';
+import { AccountService } from '@/domain/account-service';
+import type { Account } from '@/domain/models';
+import type { ValidationResult } from '@/domain/rules';
 
-export interface BankApi {
-  readonly state: BankState;
-  /**
-   * Creates the account and selects it. Returns the new account id.
-   * Defaults to the app currency when none is given.
-   */
-  createAccount(name: string, currency?: string): string;
+export type CreateAccountResult =
+  | { ok: true; accountId: string }
+  | { ok: false; error: string };
+
+export interface BankContextValue {
+  readonly accounts: readonly Account[];
+  readonly selectedAccount: Account | undefined;
+
+  createAccount(name: string, currency?: string): CreateAccountResult;
   selectAccount(id: string): void;
-  applyTransaction(
-    accountId: string,
-    type: TransactionType,
-    amountCents: number,
-  ): void;
+  deposit(accountId: string, amountCents: number): ValidationResult;
+  withdraw(accountId: string, amountCents: number): ValidationResult;
 }
 
-const BankContext = createContext<BankApi | null>(null);
+const BankContext = createContext<BankContextValue | null>(null);
 
-export function BankProvider({ children }: { children: ReactNode }): ReactNode {
-  const [state, dispatch] = useReducer(bankReducer, initialBankState);
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Something went wrong';
+}
 
-  const contextValue = useMemo<BankApi>(
+/**
+ * Talks to an account service like an API client — including turning what
+ * it throws back into a typed result — and mirrors its account list into
+ * React state so the UI re-renders after each mutation. The selection is
+ * pure UI state the service knows nothing about.
+ */
+export function BankProvider({
+  children,
+}: {
+  children: ReactNode;
+}): ReactNode {
+  const [service] = useState(() => new AccountService());
+  const [accounts, setAccounts] = useState<readonly Account[]>(() => service.getAllAccounts());
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(
+    () => accounts[0]?.id ?? null,
+  );
+
+  const contextValue = useMemo<BankContextValue>(
     () => ({
-      state,
-      createAccount(name: string, currency?: string): string {
-        const id = crypto.randomUUID();
-        dispatch({ type: 'account/create', id, name, currency });
-        return id;
+      accounts,
+      selectedAccount: accounts.find((account) => account.id === selectedAccountId),
+      createAccount(name: string, currency?: string): CreateAccountResult {
+        try {
+          const account = service.createAccount(name, currency);
+          setAccounts(service.getAllAccounts());
+          setSelectedAccountId(account.id);
+          return { ok: true, accountId: account.id };
+        } catch (error) {
+          return { ok: false, error: errorMessage(error) };
+        }
       },
       selectAccount(id: string): void {
-        dispatch({ type: 'account/select', id });
+        if (service.getAccount(id) !== undefined) {
+          setSelectedAccountId(id);
+        }
       },
-      applyTransaction(
-        accountId: string,
-        type: TransactionType,
-        amountCents: number,
-      ): void {
-        dispatch({
-          type: 'transaction/apply',
-          transactionType: type,
-          accountId,
-          amountCents,
-          transactionId: crypto.randomUUID(),
-          timestamp: Date.now(),
-        });
+      deposit(accountId: string, amountCents: number): ValidationResult {
+        try {
+          service.deposit(accountId, amountCents);
+          setAccounts(service.getAllAccounts());
+          return { ok: true };
+        } catch (error) {
+          return { ok: false, error: errorMessage(error) };
+        }
+      },
+      withdraw(accountId: string, amountCents: number): ValidationResult {
+        try {
+          service.withdraw(accountId, amountCents);
+          setAccounts(service.getAllAccounts());
+          return { ok: true };
+        } catch (error) {
+          return { ok: false, error: errorMessage(error) };
+        }
       },
     }),
-    [state],
+    [service, accounts, selectedAccountId],
   );
 
   return <BankContext.Provider value={contextValue}>{children}</BankContext.Provider>;
 }
 
-export function useBank(): BankApi {
+export function useBank(): BankContextValue {
   const context = useContext(BankContext);
   if (context === null) {
     throw new Error('useBank must be used inside <BankProvider>');

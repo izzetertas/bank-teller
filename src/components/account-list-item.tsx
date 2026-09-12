@@ -3,8 +3,8 @@
 import type { ReactNode } from 'react';
 
 import { Avatar } from '@/components/ui';
-import type { Account } from '@/domain/bank';
-import { formatCents } from '@/domain/money';
+import type { Account } from '@/domain/models';
+import { formatCents } from '@/domain/amount';
 
 type AccountListItemProps = {
   current: boolean;

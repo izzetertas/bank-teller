@@ -41,10 +41,10 @@ npm run start      # serve out/ at http://localhost:3000, exactly as production 
   dashboard without creating anything.
 - The name is required; a blank or whitespace-only name is rejected with
   "Customer name is required", and the stored name is trimmed.
-- Customer names are unique, compared case-insensitively on the trimmed name:
-  opening a second account for an existing name is rejected with
-  "An account for “X” already exists". The reducer enforces the same rule
-  defensively, independent of the UI.
+- Customer names are not unique. The brief requires a name and a unique
+  account id, nothing more, so one customer may hold several accounts and two
+  customers may share a name; accounts are told apart by their number. The
+  service enforces the blank-name rule defensively, independent of the UI.
 - On Save, the new account starts with a $0.00 balance and an empty transaction
   history, immediately becomes the active account, and the teller is returned to
   the dashboard showing it. Bank state lives in a provider mounted in the root
@@ -67,7 +67,8 @@ npm run start      # serve out/ at http://localhost:3000, exactly as production 
   label follows the mode ("Deposit cash" / "Withdraw cash") submits; Enter in the
   amount field submits the current mode. An "Available balance" hint sits under
   the field, and the action button is disabled in withdraw mode while the
-  balance is zero.
+  balance is zero. The form resets to deposit mode, with the amount and any
+  error cleared, whenever the teller switches to a different account.
 - The account card shows the customer name with a sequential teller-facing
   account number ("ACC-1001", assigned at creation) and a labeled
   "Current balance" block; the balance briefly flashes when it changes.
@@ -82,7 +83,7 @@ npm run start      # serve out/ at http://localhost:3000, exactly as production 
 - All monetary values are handled internally as **integer cents** — floating-point
   dollar arithmetic is never used for balances.
 - The currency is not hardcoded: each account stores its own ISO 4217 `currency`,
-  assigned at creation and defaulting to `DEFAULT_CURRENCY` in `src/domain/money.ts`
+  assigned at creation and defaulting to `DEFAULT_CURRENCY` in `src/domain/amount.ts`
   (`USD`). The amount-field label, balances, ledger amounts, and error messages
   all format in the account's currency, and `createAccount(name, currency?)`
   already accepts an explicit code — a currency dropdown on the open-account
@@ -100,10 +101,12 @@ npm run start      # serve out/ at http://localhost:3000, exactly as production 
 - A withdrawal larger than the current balance is rejected as an overdraft with
   "Insufficient funds — the balance is $X.XX", and the balance and history are
   left unchanged.
-- Validation is enforced twice: the UI validates first so it can show a message,
-  and the state reducer independently rejects any invalid action (unknown account,
-  overdraft, non-positive or non-integer amount) by leaving state unchanged, so
-  correctness never depends on the UI.
+- Validation is enforced twice: the UI calls the same `validate*` rule first so
+  it can show a message, and the account service — used like a small API —
+  independently rejects any invalid call (unknown account, overdraft,
+  non-positive or non-integer amount, amount above the per-transaction
+  maximum) by throwing, without storing anything, so correctness never
+  depends on the UI.
 
 ### Notifications
 
@@ -118,11 +121,18 @@ npm run start      # serve out/ at http://localhost:3000, exactly as production 
 
 ### State
 
-- State lives in memory in a React reducer (`bankReducer`) behind a context
-  provider; there is no backend or persistence, and a page reload starts a fresh
+- `AccountService` is a small in-memory backend that happens to run in the
+  browser: it opens accounts, moves money and keeps every account in a map.
+  There is no real backend or persistence, and a page reload starts a fresh
   session.
-- The reducer is pure and deterministic: ids and timestamps are supplied by the
-  action creators, never generated inside the reducer.
+- `BankProvider` constructs and holds one service instance per mount, the way
+  a component would hold an API client. There is no singleton: every mount —
+  in production or in a test — starts from its own empty bank. The provider
+  keeps a local copy of the account list so React re-renders after each
+  mutation, and holds the selected account id, which is pure UI state the
+  service knows nothing about.
+- The service is the only place ids and timestamps are generated; the rules
+  and amount helpers stay pure and are tested with plain calls.
 
 [↑ Index](#index)
 
@@ -137,10 +147,13 @@ src/
                 form, transaction list + row
   components/ui/  Reusable primitives: Avatar, Button/LinkButton, ErrorNote,
                 Field, MicroLabel, Modal, PageLayout, Panel, TextInput
-  domain/       Pure domain logic — money parsing/formatting (money.ts) and
-                the account/transaction model + reducer (bank.ts)
-  state/        React contexts: bank reducer (bank-context.tsx) and toast
-                notifications (toast-context.tsx)
+  domain/       Pure domain logic — amount parsing/formatting (amount.ts), the
+                account/transaction model (models.ts), the validation rules
+                shared by UI and service (rules.ts), and the in-memory
+                account service that opens accounts and moves money
+                (account-service.ts)
+  state/        React contexts: bank provider wrapping the service
+                (bank-context.tsx) and toast notifications (toast-context.tsx)
 tests/          Vitest suites: unit tests for the pure domain logic, jsdom
                 integration tests for the dashboard flows, and error-page tests
 e2e/            Playwright smoke suite against the real app in Chromium
@@ -193,7 +206,7 @@ and the ledger scrolls horizontally inside its card.
 Tests run with Vitest. Domain logic (`tests/domain/`)
 is unit-tested directly since it is pure. The dashboard flows
 (`tests/teller-dashboard.test.tsx`) are tested through Testing Library in jsdom:
-opening accounts (including duplicate-name rejection), depositing, withdrawing,
+opening accounts (including a second one for the same name), depositing, withdrawing,
 overdraft rejection, input filtering, toast behavior, and the switch-account
 modal — search by name or number, sorting, and full keyboard interaction
 (arrow keys, focus trap, Escape). `tests/ui/` mirrors `components/ui/` with

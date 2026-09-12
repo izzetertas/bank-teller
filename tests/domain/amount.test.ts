@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatCents, MAX_TRANSACTION_CENTS, parseAmount } from '@/domain/money';
+import { formatCents, MAX_TRANSACTION_CENTS, parseAmount } from '@/domain/amount';
 
 describe('parseAmount', () => {
   it.each([

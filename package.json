@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "serve out -l 3000",
     "test": "vitest run",
+    "test:verbose": "vitest run --reporter=verbose",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",

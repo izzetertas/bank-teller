@@ -19,12 +19,12 @@ interface Toast {
   readonly message: string;
 }
 
-export interface ToastApi {
+export interface ToastContextValue {
   /** Shows a transient success notification; it auto-dismisses after a few seconds. */
   showToast(message: string): void;
 }
 
-const ToastContext = createContext<ToastApi | null>(null);
+const ToastContext = createContext<ToastContextValue | null>(null);
 
 export function ToastProvider({ children }: { children: ReactNode }): ReactNode {
   const [toasts, setToasts] = useState<readonly Toast[]>([]);
@@ -44,7 +44,7 @@ export function ToastProvider({ children }: { children: ReactNode }): ReactNode 
     [dismiss],
   );
 
-  const contextValue = useMemo<ToastApi>(() => ({ showToast }), [showToast]);
+  const contextValue = useMemo<ToastContextValue>(() => ({ showToast }), [showToast]);
 
   return (
     <ToastContext.Provider value={contextValue}>
@@ -69,7 +69,7 @@ export function ToastProvider({ children }: { children: ReactNode }): ReactNode 
   );
 }
 
-export function useToast(): ToastApi {
+export function useToast(): ToastContextValue {
   const api = useContext(ToastContext);
   if (api === null) {
     throw new Error('useToast must be used inside <ToastProvider>');
