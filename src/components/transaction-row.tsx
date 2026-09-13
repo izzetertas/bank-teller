@@ -5,6 +5,14 @@ import type { ReactNode } from 'react';
 import type { Transaction } from '@/domain/models';
 import { formatCents } from '@/domain/amount';
 
+export const TransactionTypeMap = {
+  deposit: 'Deposited',
+  withdrawal: 'Withdrew',
+  transfer: 'Transferred',
+  'transfer-in': 'Transfer from',
+  'transfer-out': 'Transfer to',
+};
+
 const timeFormatter = new Intl.DateTimeFormat('en-US', {
   month: 'short',
   day: 'numeric',
@@ -12,6 +20,19 @@ const timeFormatter = new Intl.DateTimeFormat('en-US', {
   minute: '2-digit',
   second: '2-digit',
 });
+
+function describeTransaction(transaction: Transaction) {
+  switch (transaction.type) {
+    case 'deposit':
+      return 'Deposit';
+    case 'withdrawal':
+      return 'Withdrawal';
+    case 'transfer-in':
+      return `Transfer from ${transaction.counterpartyNumber}`;
+    case 'transfer-out':
+      return `Transfer to ${transaction.counterpartyNumber}`;
+  }
+}
 
 /** One ledger entry; expects to be rendered inside the ledger <tbody>. */
 export function TransactionRow({
@@ -22,7 +43,8 @@ export function TransactionRow({
   /** ISO 4217 code of the account the transaction belongs to. */
   currency?: string;
 }): ReactNode {
-  const isDeposit = transaction.type === 'deposit';
+  const isDeposit =
+    transaction.type === 'deposit' || transaction.type === 'transfer-in';
   const tone = isDeposit ? 'text-success' : 'text-danger';
 
   return (
@@ -32,7 +54,7 @@ export function TransactionRow({
       </td>
       <td className="ledger-td">
         <span className={`ledger-type ${tone}`}>
-          {isDeposit ? 'Deposit' : 'Withdrawal'}
+          {describeTransaction(transaction)}
         </span>
       </td>
       <td className={`ledger-td ledger-num ${tone}`}>

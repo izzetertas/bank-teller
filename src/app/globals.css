@@ -104,6 +104,9 @@
   .text-input {
     @apply rounded-lg border border-line bg-panel px-3 py-2 text-base text-ink focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent;
   }
+  .select-input {
+    @apply rounded-lg border border-line h-11 bg-panel mb-4 px-3 py-2 text-base text-ink focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent;
+  }
   .field {
     @apply flex flex-col gap-1 text-sm text-soft;
   }
@@ -165,7 +168,7 @@
 
   /* Transaction ledger */
   .ledger {
-    @apply mt-3 w-full min-w-[30rem] border-collapse text-[0.92rem];
+    @apply mt-3 w-full min-w-120 border-collapse text-[0.92rem];
   }
   .ledger-th {
     @apply border-b-2 border-ink px-2.5 py-2 text-left text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-soft;

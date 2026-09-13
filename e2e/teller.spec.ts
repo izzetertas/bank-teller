@@ -91,6 +91,49 @@ test('blocks an overdraft with a visible error', async ({ page }) => {
   await expect(page.getByLabel('Current balance')).toHaveText('$10.00');
 });
 
+test('transfers cash between two accounts and records both ledger legs', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await openAccount(page, 'Ada Lovelace'); // ACC-1001
+  await page.getByLabel(/Amount/).fill('200');
+  await page.getByRole('button', { name: 'Deposit cash' }).click();
+  await dismissToasts(page);
+  await openAccount(page, 'Grace Hopper'); // ACC-1002
+
+  await page.getByRole('button', { name: 'Switch account' }).click();
+  const switchDialog = page.getByRole('dialog', { name: 'Switch account' });
+  await switchDialog.getByRole('button', { name: /Ada/ }).click();
+  await expect(switchDialog).toBeHidden();
+
+  await page.getByRole('button', { name: 'Transfer', exact: true }).click();
+  await page
+    .getByLabel('To Account')
+    .selectOption({ label: 'Grace Hopper (ACC-1002)' });
+  await page.getByLabel(/Amount/).fill('50');
+  await page.getByRole('button', { name: 'Transfer funds' }).click();
+
+  await expect(page.getByLabel('Current balance')).toHaveText('$150.00');
+  const sourceRows = page
+    .getByRole('region', { name: 'Transaction history' })
+    .getByRole('row');
+  await expect(sourceRows.nth(1)).toContainText('Transfer to ACC-1002');
+  await expect(sourceRows.nth(1)).toContainText('−$50.00');
+  await dismissToasts(page);
+
+  await page.getByRole('button', { name: 'Switch account' }).click();
+  const switchBackDialog = page.getByRole('dialog', { name: 'Switch account' });
+  await switchBackDialog.getByRole('button', { name: /Grace/ }).click();
+  await expect(switchBackDialog).toBeHidden();
+
+  await expect(page.getByLabel('Current balance')).toHaveText('$50.00');
+  const destinationRows = page
+    .getByRole('region', { name: 'Transaction history' })
+    .getByRole('row');
+  await expect(destinationRows.nth(1)).toContainText('Transfer from ACC-1001');
+  await expect(destinationRows.nth(1)).toContainText('$50.00');
+});
+
 test('switches between accounts through the modal', async ({ page }) => {
   await page.goto('/');
   await openAccount(page, 'Ada Lovelace');

@@ -23,6 +23,11 @@ export interface BankContextValue {
   selectAccount(id: string): void;
   deposit(accountId: string, amountCents: number): ValidationResult;
   withdraw(accountId: string, amountCents: number): ValidationResult;
+  transfer(
+    fromAccountId: string,
+    toAccountId: string,
+    amountCents: number,
+  ): ValidationResult;
 }
 
 const BankContext = createContext<BankContextValue | null>(null);
@@ -79,6 +84,19 @@ export function BankProvider({ children }: { children: ReactNode }): ReactNode {
       withdraw(accountId: string, amountCents: number): ValidationResult {
         try {
           service.withdraw(accountId, amountCents);
+          setAccounts(service.getAllAccounts());
+          return { ok: true };
+        } catch (error) {
+          return { ok: false, error: errorMessage(error) };
+        }
+      },
+      transfer(
+        fromAccountId: string,
+        toAccountId: string,
+        amountCents: number,
+      ): ValidationResult {
+        try {
+          service.transfer(fromAccountId, toAccountId, amountCents);
           setAccounts(service.getAllAccounts());
           return { ok: true };
         } catch (error) {

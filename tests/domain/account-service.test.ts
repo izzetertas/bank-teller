@@ -187,3 +187,88 @@ describe('AccountService.deposit and withdraw', () => {
     expect(before?.transactions).toHaveLength(0);
   });
 });
+
+describe('AccountService.transfer', () => {
+  let service: AccountService;
+  let account1Id: string;
+  let account2Id: string;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(FIXED_TIMESTAMP);
+    service = createService();
+    account1Id = openAccount(service, 'Ada');
+    account2Id = openAccount(service, 'John');
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('throws when either account does not exist', () => {
+    expect(() => service.transfer('wrong-id-1', account2Id, 1000)).toThrow(
+      'Account not found',
+    );
+    expect(() => service.transfer(account1Id, 'wrong-id-2', 1000)).toThrow(
+      'Account not found',
+    );
+  });
+
+  it('throws on a transfer to the same account', () => {
+    expect(() => service.transfer(account1Id, account1Id, 1000)).toThrow(
+      'Accounts must be different',
+    );
+  });
+
+  it('throws on invalid amounts', () => {
+    const message = 'Amount must be greater than zero';
+    expect(() => service.transfer(account1Id, account2Id, 0)).toThrow(message);
+    expect(() => service.transfer(account1Id, account2Id, -10)).toThrow(
+      message,
+    );
+    expect(() => service.transfer(account1Id, account2Id, 10.5)).toThrow(
+      message,
+    );
+  });
+
+  it('throws on an overdraft and leaves the account untouched', () => {
+    service.deposit(account1Id, 1000);
+    expect(() => service.transfer(account1Id, account2Id, 1500)).toThrow(
+      'Insufficient funds — the balance is $10.00',
+    );
+    expect(service.getAccount(account1Id)?.balanceCents).toBe(1000);
+    expect(service.getAccount(account2Id)?.balanceCents).toBe(0);
+  });
+
+  it('throws when accounts are in different currencies', () => {
+    const accountId3 = openAccount(service, 'Sam', 'GBP');
+    expect(() => service.transfer(account1Id, accountId3, 100)).toThrow(
+      'Accounts must be in the same currency',
+    );
+  });
+
+  it('transfers amount successfully between accounts', () => {
+    const account1Number = service.getAccount(account1Id)?.number;
+    const account2Number = service.getAccount(account2Id)?.number;
+    const transferAmount = 400;
+    service.deposit(account1Id, 2000);
+    const result = service.transfer(account1Id, account2Id, transferAmount);
+
+    expect(result.from.account).toMatchObject({
+      balanceCents: 1600,
+      id: account1Id,
+    });
+    expect(result.from.transaction).toMatchObject({
+      type: 'transfer-out',
+      amountCents: transferAmount,
+      balanceAfterCents: 1600,
+      counterpartyNumber: account2Number,
+    });
+    expect(result.to.transaction).toMatchObject({
+      type: 'transfer-in',
+      amountCents: transferAmount,
+      balanceAfterCents: 400,
+      counterpartyNumber: account1Number,
+    });
+  });
+});

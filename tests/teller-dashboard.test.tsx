@@ -81,6 +81,31 @@ async function submitTransaction(
   );
 }
 
+async function switchToAccount(user: UserEvent, name: string): Promise<void> {
+  await user.click(screen.getByRole('button', { name: 'Switch account' }));
+  const dialog = screen.getByRole('dialog', { name: 'Switch account' });
+  await user.click(
+    within(dialog).getByRole('button', { name: new RegExp(name) }),
+  );
+}
+
+async function submitTransfer(
+  user: UserEvent,
+  destinationName: string,
+  amount: string,
+): Promise<void> {
+  await user.click(screen.getByRole('button', { name: 'Transfer' }));
+  const select = screen.getByLabelText('To Account');
+  await user.selectOptions(
+    select,
+    within(select).getByRole('option', { name: new RegExp(destinationName) }),
+  );
+  const amountInput = screen.getByLabelText('Amount (USD)');
+  await user.clear(amountInput);
+  await user.type(amountInput, amount);
+  await user.click(screen.getByRole('button', { name: 'Transfer funds' }));
+}
+
 describe('teller dashboard', () => {
   beforeEach(() => {
     render(<TestApp />);
@@ -390,5 +415,95 @@ describe('teller dashboard', () => {
     expect(depositRow).toHaveTextContent('Deposit');
     expect(depositRow).toHaveTextContent('$100.00');
     expect(depositRow?.textContent).not.toContain('+');
+  });
+
+  it('transfers money between two accounts and records both legs', async () => {
+    const user = userEvent.setup();
+    await openAccount(user, 'Ada'); // ACC-1001
+    await submitTransaction(user, 'Deposit', '200');
+    await openAccount(user, 'Grace'); // ACC-1002
+    await switchToAccount(user, 'Ada');
+
+    await submitTransfer(user, 'Grace', '50');
+
+    expect(screen.getByLabelText('Current balance')).toHaveTextContent(
+      '$150.00',
+    );
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Transferred $50.00 — balance $150.00',
+    );
+    const history = screen.getByRole('region', { name: 'Transaction history' });
+    const row = within(history).getAllByRole('row')[1];
+    expect(row).toHaveTextContent('Transfer to ACC-1002');
+    expect(row).toHaveTextContent('−$50.00');
+
+    await switchToAccount(user, 'Grace');
+    expect(screen.getByLabelText('Current balance')).toHaveTextContent(
+      '$50.00',
+    );
+    const destinationHistory = screen.getByRole('region', {
+      name: 'Transaction history',
+    });
+    expect(within(destinationHistory).getAllByRole('row')[1]).toHaveTextContent(
+      'Transfer from ACC-1001',
+    );
+  });
+
+  it('excludes the current account from the transfer destination list', async () => {
+    const user = userEvent.setup();
+    await openAccount(user, 'Ada');
+    await user.click(screen.getByRole('button', { name: 'Transfer' }));
+    expect(
+      within(screen.getByLabelText('To Account')).getAllByRole('option'),
+    ).toHaveLength(1); // only the disabled placeholder
+
+    await openAccount(user, 'Grace');
+    await user.click(screen.getByRole('button', { name: 'Transfer' }));
+    const select = screen.getByLabelText('To Account');
+    expect(
+      within(select).queryByRole('option', { name: /Grace/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(select).getByRole('option', { name: /Ada/ }),
+    ).toBeInTheDocument();
+  });
+
+  it('blocks a transfer that exceeds the balance', async () => {
+    const user = userEvent.setup();
+    await openAccount(user, 'Ada');
+    await submitTransaction(user, 'Deposit', '10');
+    await openAccount(user, 'Grace');
+    await switchToAccount(user, 'Ada');
+
+    await submitTransfer(user, 'Grace', '10.01');
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Insufficient funds — the balance is $10.00',
+    );
+    expect(screen.getByLabelText('Current balance')).toHaveTextContent(
+      '$10.00',
+    );
+  });
+
+  it('disables the transfer submit until a destination account is chosen', async () => {
+    const user = userEvent.setup();
+    await openAccount(user, 'Ada');
+    await submitTransaction(user, 'Deposit', '10');
+    await openAccount(user, 'Grace');
+    await switchToAccount(user, 'Ada');
+
+    await user.click(screen.getByRole('button', { name: 'Transfer' }));
+    expect(
+      screen.getByRole('button', { name: 'Transfer funds' }),
+    ).toBeDisabled();
+
+    const select = screen.getByLabelText('To Account');
+    await user.selectOptions(
+      select,
+      within(select).getByRole('option', { name: /Grace/ }),
+    );
+    expect(
+      screen.getByRole('button', { name: 'Transfer funds' }),
+    ).toBeEnabled();
   });
 });

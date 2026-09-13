@@ -66,6 +66,33 @@ export class AccountService {
     return this.post(account, 'withdrawal', amountCents);
   }
 
+  transfer(
+    fromAccountId: string,
+    toAccountId: string,
+    amountCents: number,
+  ): {
+    from: Posting;
+    to: Posting;
+  } {
+    const fromAccount = this.findAccount(fromAccountId);
+    const toAccount = this.findAccount(toAccountId);
+    this.validateDistinctAccounts(fromAccountId, toAccountId);
+
+    this.validateAmount(fromAccount, amountCents);
+    this.validateCurrencyCodes(fromAccount, toAccount);
+    this.validateWithdrawal(fromAccount, amountCents);
+
+    return {
+      from: this.post(
+        fromAccount,
+        'transfer-out',
+        amountCents,
+        toAccount.number,
+      ),
+      to: this.post(toAccount, 'transfer-in', amountCents, fromAccount.number),
+    };
+  }
+
   private generateAccountNumber(): string {
     return `ACC-${this.nextAccountNumber++}`;
   }
@@ -79,10 +106,22 @@ export class AccountService {
     return account;
   }
 
+  private validateDistinctAccounts(from: string, to: string): void {
+    if (from === to) {
+      throw new Error('Accounts must be different');
+    }
+  }
+
   private validateAmount(account: Account, amountCents: number): void {
     const validation = checkAmount(account, amountCents);
     if (!validation.ok) {
       throw new Error(validation.error);
+    }
+  }
+
+  private validateCurrencyCodes(from: Account, to: Account): void {
+    if (from.currency !== to.currency) {
+      throw new Error('Accounts must be in the same currency');
     }
   }
 
@@ -97,13 +136,16 @@ export class AccountService {
     account: Account,
     type: TransactionType,
     amountCents: number,
+    counterpartyNumber?: string,
   ): Posting {
-    const delta = type === 'deposit' ? amountCents : -amountCents;
+    const delta =
+      type === 'deposit' || type === 'transfer-in' ? amountCents : -amountCents;
     const balanceAfterCents = account.balanceCents + delta;
     const transaction: Transaction = {
       id: crypto.randomUUID(),
       type,
       amountCents,
+      counterpartyNumber,
       balanceAfterCents,
       timestamp: Date.now(),
     };
