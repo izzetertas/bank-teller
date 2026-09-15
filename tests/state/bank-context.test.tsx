@@ -57,6 +57,49 @@ describe('useBank', () => {
     ).toBeGreaterThan(0);
   });
 
+  it('transfers between accounts with a distinct id per ledger leg', () => {
+    const { result } = renderHook(() => useBank(), { wrapper: BankProvider });
+    const sourceAccountId = openAccount(result, 'Ada');
+    const destinationAccountId = openAccount(result, 'Sam');
+
+    act(() => {
+      result.current.deposit(sourceAccountId, 1000);
+    });
+
+    let transfer: ReturnType<typeof result.current.transfer> = {
+      ok: false,
+      error: '',
+    };
+    act(() => {
+      transfer = result.current.transfer(
+        sourceAccountId,
+        destinationAccountId,
+        400,
+      );
+    });
+    expect(transfer).toEqual({ ok: true });
+
+    const findAccount = (id: string) =>
+      result.current.accounts.find((account) => account.id === id);
+    const source = findAccount(sourceAccountId);
+    const destination = findAccount(destinationAccountId);
+    expect(source?.balanceCents).toBe(600);
+    expect(destination?.balanceCents).toBe(400);
+    expect(source?.transactions[0]).toMatchObject({
+      type: 'transfer-out',
+      amountCents: 400,
+      balanceAfterCents: 600,
+      counterpartyNumber: destination?.number,
+    });
+
+    expect(destination?.transactions[0]).toMatchObject({
+      type: 'transfer-in',
+      amountCents: 400,
+      balanceAfterCents: 400,
+      counterpartyNumber: source?.number,
+    });
+  });
+
   it('surfaces the service error when a rejected mutation reaches it', () => {
     const { result } = renderHook(() => useBank(), { wrapper: BankProvider });
 

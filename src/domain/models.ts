@@ -4,7 +4,8 @@
  * dependencies and every other domain module can import it freely.
  */
 
-export type TransactionType = 'deposit' | 'withdrawal';
+export type TransactionType =
+  'deposit' | 'withdrawal' | 'transfer-out' | 'transfer-in';
 
 export interface Transaction {
   readonly id: string;
@@ -12,6 +13,7 @@ export interface Transaction {
   readonly amountCents: number;
   readonly balanceAfterCents: number;
   readonly timestamp: number;
+  readonly counterpartyNumber?: string;
 }
 
 export interface Account {
